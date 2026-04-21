@@ -62,9 +62,19 @@ export default function OnboardingStep8({ navigation, nextStep }) {
       Alert.alert('Camera Required', 'Camera access is required to scan products. Please grant permission to continue.');
       return;
     }
+    
+    console.log('Starting onboarding completion...');
     setCompleting(true);
-    await nextStep();
-    setCompleting(false);
+    
+    try {
+      await nextStep();
+      console.log('Onboarding completion successful');
+    } catch (error) {
+      console.error('Onboarding completion error:', error);
+      Alert.alert('Error', 'Failed to complete setup. Please try again.');
+    } finally {
+      setCompleting(false);
+    }
   };
 
   const requestAllPermissions = async () => {

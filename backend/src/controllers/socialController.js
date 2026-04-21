@@ -1,69 +1,24 @@
-const { supabase } = require('../utils/database');
+const socialService = require('../services/socialService');
 const { ValidationError, NotFoundError } = require('../middleware/errorHandler');
-const { logger } = require('../utils/logger');
 
 class SocialController {
-  async createPost(req, res, next) {
+  async getFeed(req, res, next) {
     try {
-      const { content, imageUrls, tags, isPublic = true } = req.body;
       const userId = req.user.id;
-
-      const { data: post, error } = await supabase
-        .from('social_posts')
-        .insert([{
-          user_id: userId,
-          content,
-          image_urls: imageUrls || [],
-          tags: tags || [],
-          is_public: isPublic,
-          created_at: new Date().toISOString(),
-        }])
-        .select()
-        .single();
-
-      if (error) {
-        throw new ValidationError(error.message);
-      }
-
-      res.json({
-        status: 'success',
-        data: { post },
-      });
+      const { filter = 'all', limit = 20, offset = 0 } = req.query;
+      
+      const posts = await socialService.getFeed(userId, { filter, limit: parseInt(limit), offset: parseInt(offset) });
+      res.json({ success: true, data: { posts } });
     } catch (error) {
       next(error);
     }
   }
 
-  async getPosts(req, res, next) {
+  async createPost(req, res, next) {
     try {
-      const { limit = 20, offset = 0 } = req.query;
-
-      const { data: posts, error } = await supabase
-        .from('social_posts')
-        .select(`
-          *,
-          users (
-            username,
-            avatar_url
-          )
-        `)
-        .eq('is_public', true)
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1);
-
-      if (error) {
-        throw new ValidationError(error.message);
-      }
-
-      res.json({
-        status: 'success',
-        data: {
-          posts,
-          total: posts.length,
-          limit: parseInt(limit),
-          offset: parseInt(offset),
-        },
-      });
+      const userId = req.user.id;
+      const post = await socialService.createPost(userId, req.body);
+      res.json({ success: true, data: { post } });
     } catch (error) {
       next(error);
     }
@@ -71,30 +26,44 @@ class SocialController {
 
   async getPost(req, res, next) {
     try {
-      const { postId } = req.params;
       const userId = req.user.id;
+      const { postId } = req.params;
+      const post = await socialService.getPost(postId, userId);
+      res.json({ success: true, data: { post } });
+    } catch (error) {
+      next(error);
+    }
+  }
 
-      const { data: post, error } = await supabase
-        .from('social_posts')
-        .select(`
-          *,
-          users (
-            username,
-            avatar_url
-          )
-        `)
-        .eq('id', postId)
-        .or(`user_id.eq.${userId},and(is_public.eq.true)`)
-        .single();
+  async updatePost(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { postId } = req.params;
+      const post = await socialService.updatePost(postId, userId, req.body);
+      res.json({ success: true, data: { post } });
+    } catch (error) {
+      next(error);
+    }
+  }
 
-      if (error || !post) {
-        throw new NotFoundError('Post not found');
-      }
+  async deletePost(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { postId } = req.params;
+      await socialService.deletePost(postId, userId);
+      res.json({ success: true, message: 'Post deleted' });
+    } catch (error) {
+      next(error);
+    }
+  }
 
-      res.json({
-        status: 'success',
-        data: { post },
-      });
+  async getUserPosts(req, res, next) {
+    try {
+      const currentUserId = req.user.id;
+      const { userId } = req.params;
+      const { limit = 20, offset = 0 } = req.query;
+      const posts = await socialService.getUserPosts(userId, currentUserId, { limit: parseInt(limit), offset: parseInt(offset) });
+      res.json({ success: true, data: { posts } });
     } catch (error) {
       next(error);
     }
@@ -102,68 +71,111 @@ class SocialController {
 
   async likePost(req, res, next) {
     try {
-      const { postId } = req.params;
       const userId = req.user.id;
-
-      // Check if post exists and is accessible
-      const { data: post, error: postError } = await supabase
-        .from('social_posts')
-        .select('id')
-        .eq('id', postId)
-        .single();
-
-      if (postError || !post) {
-        throw new NotFoundError('Post not found');
-      }
-
-      // Increment likes count
-      const { data, error } = await supabase.rpc('increment_post_likes', {
-        post_id: postId,
-      });
-
-      if (error) {
-        throw new ValidationError(error.message);
-      }
-
-      res.json({
-        status: 'success',
-        message: 'Post liked successfully',
-      });
+      const { postId } = req.params;
+      const result = await socialService.likePost(postId, userId);
+      res.json({ success: true, data: result });
     } catch (error) {
       next(error);
     }
   }
 
-  async commentPost(req, res, next) {
+  async unlikePost(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { postId } = req.params;
+      const result = await socialService.unlikePost(postId, userId);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getPostLikes(req, res, next) {
     try {
       const { postId } = req.params;
-      const { content } = req.body;
+      const { limit = 50, offset = 0 } = req.query;
+      const likes = await socialService.getPostLikes(postId, { limit: parseInt(limit), offset: parseInt(offset) });
+      res.json({ success: true, data: { likes } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async createComment(req, res, next) {
+    try {
       const userId = req.user.id;
+      const { postId } = req.params;
+      const { content, parent_comment_id } = req.body;
+      const comment = await socialService.createComment(postId, userId, content, parent_comment_id);
+      res.json({ success: true, data: { comment } });
+    } catch (error) {
+      next(error);
+    }
+  }
 
-      // Check if post exists and is accessible
-      const { data: post, error: postError } = await supabase
-        .from('social_posts')
-        .select('id')
-        .eq('id', postId)
-        .single();
+  async getComments(req, res, next) {
+    try {
+      const { postId } = req.params;
+      const { limit = 50, offset = 0 } = req.query;
+      const comments = await socialService.getComments(postId, { limit: parseInt(limit), offset: parseInt(offset) });
+      res.json({ success: true, data: { comments } });
+    } catch (error) {
+      next(error);
+    }
+  }
 
-      if (postError || !post) {
-        throw new NotFoundError('Post not found');
-      }
+  async getCommentReplies(req, res, next) {
+    try {
+      const { commentId } = req.params;
+      const { limit = 20, offset = 0 } = req.query;
+      const replies = await socialService.getCommentReplies(commentId, { limit: parseInt(limit), offset: parseInt(offset) });
+      res.json({ success: true, data: { replies } });
+    } catch (error) {
+      next(error);
+    }
+  }
 
-      // Create comment (simplified - in real implementation you'd have a comments table)
-      const { data, error } = await supabase.rpc('increment_post_comments', {
-        post_id: postId,
-      });
+  async updateComment(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { commentId } = req.params;
+      const { content } = req.body;
+      const comment = await socialService.updateComment(commentId, userId, content);
+      res.json({ success: true, data: { comment } });
+    } catch (error) {
+      next(error);
+    }
+  }
 
-      if (error) {
-        throw new ValidationError(error.message);
-      }
+  async deleteComment(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { commentId } = req.params;
+      await socialService.deleteComment(commentId, userId);
+      res.json({ success: true, message: 'Comment deleted' });
+    } catch (error) {
+      next(error);
+    }
+  }
 
-      res.json({
-        status: 'success',
-        message: 'Comment added successfully',
-      });
+  async likeComment(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { commentId } = req.params;
+      const result = await socialService.likeComment(commentId, userId);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async unlikeComment(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { commentId } = req.params;
+      const result = await socialService.unlikeComment(commentId, userId);
+      res.json({ success: true, data: result });
     } catch (error) {
       next(error);
     }
@@ -171,70 +183,154 @@ class SocialController {
 
   async sharePost(req, res, next) {
     try {
-      const { postId } = req.params;
       const userId = req.user.id;
-
-      // Check if post exists and is accessible
-      const { data: post, error: postError } = await supabase
-        .from('social_posts')
-        .select('id')
-        .eq('id', postId)
-        .single();
-
-      if (postError || !post) {
-        throw new NotFoundError('Post not found');
-      }
-
-      // Increment shares count
-      const { data, error } = await supabase.rpc('increment_post_shares', {
-        post_id: postId,
-      });
-
-      if (error) {
-        throw new ValidationError(error.message);
-      }
-
-      res.json({
-        status: 'success',
-        message: 'Post shared successfully',
-      });
+      const { postId } = req.params;
+      const { shared_to } = req.body;
+      const share = await socialService.sharePost(postId, userId, shared_to);
+      res.json({ success: true, data: { share } });
     } catch (error) {
       next(error);
     }
   }
 
-  async getFeed(req, res, next) {
+  async reportPost(req, res, next) {
     try {
       const userId = req.user.id;
+      const { postId } = req.params;
+      const { reason, description } = req.body;
+      const report = await socialService.reportPost(postId, userId, reason, description);
+      res.json({ success: true, data: { report } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async followUser(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { targetUserId } = req.params;
+      const result = await socialService.followUser(userId, targetUserId);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async unfollowUser(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { targetUserId } = req.params;
+      const result = await socialService.unfollowUser(userId, targetUserId);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getFollowers(req, res, next) {
+    try {
+      const { userId } = req.params;
+      const { limit = 50, offset = 0 } = req.query;
+      const followers = await socialService.getFollowers(userId, { limit: parseInt(limit), offset: parseInt(offset) });
+      res.json({ success: true, data: { followers } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getFollowing(req, res, next) {
+    try {
+      const { userId } = req.params;
+      const { limit = 50, offset = 0 } = req.query;
+      const following = await socialService.getFollowing(userId, { limit: parseInt(limit), offset: parseInt(offset) });
+      res.json({ success: true, data: { following } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async checkFollowStatus(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { targetUserId } = req.params;
+      const result = await socialService.checkFollowStatus(userId, targetUserId);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async blockUser(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { targetUserId } = req.params;
+      const result = await socialService.blockUser(userId, targetUserId);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async unblockUser(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { targetUserId } = req.params;
+      const result = await socialService.unblockUser(userId, targetUserId);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getBlockedUsers(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { limit = 50, offset = 0 } = req.query;
+      const blocked = await socialService.getBlockedUsers(userId, { limit: parseInt(limit), offset: parseInt(offset) });
+      res.json({ success: true, data: { blocked } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getActivityFeed(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { limit = 50, offset = 0 } = req.query;
+      const activities = await socialService.getActivityFeed(userId, { limit: parseInt(limit), offset: parseInt(offset) });
+      res.json({ success: true, data: { activities } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getTrendingHashtags(req, res, next) {
+    try {
+      const { limit = 20 } = req.query;
+      const hashtags = await socialService.getTrendingHashtags(parseInt(limit));
+      res.json({ success: true, data: { hashtags } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getPostsByHashtag(req, res, next) {
+    try {
+      const { tag } = req.params;
       const { limit = 20, offset = 0 } = req.query;
+      const posts = await socialService.getPostsByHashtag(tag, { limit: parseInt(limit), offset: parseInt(offset) });
+      res.json({ success: true, data: { posts } });
+    } catch (error) {
+      next(error);
+    }
+  }
 
-      // Get posts from communities the user follows and their own posts
-      const { data: posts, error } = await supabase
-        .from('social_posts')
-        .select(`
-          *,
-          users (
-            username,
-            avatar_url
-          )
-        `)
-        .or(`user_id.eq.${userId},and(is_public.eq.true)`)
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1);
-
-      if (error) {
-        throw new ValidationError(error.message);
-      }
-
-      res.json({
-        status: 'success',
-        data: {
-          posts,
-          total: posts.length,
-          limit: parseInt(limit),
-          offset: parseInt(offset),
-        },
-      });
+  async searchHashtags(req, res, next) {
+    try {
+      const { q } = req.query;
+      const { limit = 20 } = req.query;
+      const hashtags = await socialService.searchHashtags(q, parseInt(limit));
+      res.json({ success: true, data: { hashtags } });
     } catch (error) {
       next(error);
     }

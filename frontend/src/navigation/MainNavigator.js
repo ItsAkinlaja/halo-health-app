@@ -13,6 +13,7 @@ import Settings from '../screens/main/Settings';
 import Notifications from '../screens/main/Notifications';
 import ScanHistory from '../screens/main/ScanHistory';
 import PlaceholderScreen from '../screens/common/PlaceholderScreen';
+import DebugScreen from '../screens/common/DebugScreen';
 import Allergies from '../screens/profile/Allergies';
 import DietaryRestrictions from '../screens/profile/DietaryRestrictions';
 import PersonalInfo from '../screens/profile/PersonalInfo';
@@ -124,6 +125,7 @@ const MainNavigator = () => {
       <Stack.Screen name="ScanHistory" component={ScanHistory} />
       <Stack.Screen name="Scanner" component={Scanner} />
       <Stack.Screen name="Meals" component={MealPlanner} />
+      <Stack.Screen name="Debug" component={DebugScreen} />
       
       {/* Settings Screens */}
       <Stack.Screen name="ProfileInfo" component={PersonalInfo} />

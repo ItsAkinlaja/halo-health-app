@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import storage, { STORAGE_KEYS } from '../../utils/storage';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../styles/theme';
 
 export default function MedicalDisclaimerScreen({ navigation }) {
@@ -10,10 +10,12 @@ export default function MedicalDisclaimerScreen({ navigation }) {
 
   const handleAccept = async () => {
     try {
-      await AsyncStorage.setItem('medicalDisclaimerAccepted', 'true');
+      await storage.setItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED, true);
       navigation.replace('MainApp');
     } catch (error) {
       console.warn('Failed to save disclaimer acceptance:', error);
+      // Navigate anyway
+      navigation.replace('MainApp');
     }
   };
 

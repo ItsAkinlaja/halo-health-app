@@ -85,29 +85,47 @@ const OnboardingStep8Wrapper = ({ navigation }) => {
   const { user } = useContext(AppContext);
 
   const handleComplete = async () => {
+    console.log('OnboardingStep8Wrapper: handleComplete called');
+    console.log('User ID:', user?.id);
+    
     try {
       if (user?.id) {
-        // Create the primary health profile with all collected data
-        await profileService.createProfile({
-          user_id: user.id,
-          name: user.user_metadata?.name || user.user_metadata?.full_name || 'My Profile',
-          is_primary: true,
-          health_goals: data.goals,
-          dietary_restrictions: data.dietaryPreferences,
-          allergies: [...data.allergies, ...data.customAllergies],
-          health_conditions: data.healthConditions,
-          notification_settings: data.notificationSettings,
-        });
-
-        // Create family member profiles
-        for (const member of data.familyMembers) {
+        console.log('Checking for existing profiles...');
+        // Check if profiles already exist
+        const existingProfiles = await profileService.getProfiles(user.id);
+        console.log('Existing profiles count:', existingProfiles?.length || 0);
+        
+        if (existingProfiles && existingProfiles.length > 0) {
+          console.log('Profiles already exist, skipping creation');
+        } else {
+          console.log('Creating primary profile...');
+          // Create the primary health profile with all collected data
           await profileService.createProfile({
             user_id: user.id,
-            name: member.name,
-            age: member.age ? parseInt(member.age, 10) : null,
-            relationship: member.relationship,
-            is_primary: false,
+            name: user.user_metadata?.name || user.user_metadata?.full_name || 'My Profile',
+            is_primary: true,
+            health_goals: data.goals || [],
+            dietary_restrictions: data.dietaryPreferences || [],
+            allergies: [...(data.allergies || []), ...(data.customAllergies || [])],
+            health_conditions: data.healthConditions || [],
+            notification_settings: data.notificationSettings || {},
           });
+          console.log('Primary profile created');
+
+          // Create family member profiles (if any)
+          if (data.familyMembers && data.familyMembers.length > 0) {
+            console.log('Creating family member profiles:', data.familyMembers.length);
+            for (const member of data.familyMembers) {
+              await profileService.createProfile({
+                user_id: user.id,
+                name: member.name,
+                age: member.age ? parseInt(member.age, 10) : null,
+                relationship: member.relationship,
+                is_primary: false,
+              });
+            }
+            console.log('Family member profiles created');
+          }
         }
       }
     } catch (error) {
@@ -115,7 +133,9 @@ const OnboardingStep8Wrapper = ({ navigation }) => {
       // Don't block completion — user can update profile later
     }
 
+    console.log('Calling completeOnboarding...');
     await completeOnboarding();
+    console.log('completeOnboarding finished');
   };
 
   return <OnboardingStep8 navigation={navigation} nextStep={handleComplete} />;

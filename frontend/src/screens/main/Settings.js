@@ -58,6 +58,12 @@ export default function Settings({ navigation }) {
         { icon: 'time-outline', label: 'Scan History', screen: 'ScanHistory' },
       ],
     },
+    {
+      title: 'Developer',
+      items: [
+        { icon: 'bug-outline', label: 'Debug Info', screen: 'Debug' },
+      ],
+    },
   ];
 
   return (
