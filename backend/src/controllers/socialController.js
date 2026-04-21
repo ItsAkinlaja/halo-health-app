@@ -335,6 +335,125 @@ class SocialController {
       next(error);
     }
   }
+
+  async createGroup(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const group = await socialService.createGroup(userId, req.body);
+      res.json({ success: true, data: { group } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getGroup(req, res, next) {
+    try {
+      const { groupId } = req.params;
+      const group = await socialService.getGroup(groupId);
+      res.json({ success: true, data: { group } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateGroup(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { groupId } = req.params;
+      const group = await socialService.updateGroup(groupId, userId, req.body);
+      res.json({ success: true, data: { group } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async deleteGroup(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { groupId } = req.params;
+      await socialService.deleteGroup(groupId, userId);
+      res.json({ success: true, message: 'Group deleted' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getGroups(req, res, next) {
+    try {
+      const { category, search, limit = 20, offset = 0 } = req.query;
+      const groups = await socialService.getGroups({ category, search, limit: parseInt(limit), offset: parseInt(offset) });
+      res.json({ success: true, data: { groups } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async joinGroup(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { groupId } = req.params;
+      const result = await socialService.joinGroup(groupId, userId);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async leaveGroup(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { groupId } = req.params;
+      const result = await socialService.leaveGroup(groupId, userId);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getGroupMembers(req, res, next) {
+    try {
+      const { groupId } = req.params;
+      const { limit = 50, offset = 0 } = req.query;
+      const members = await socialService.getGroupMembers(groupId, { limit: parseInt(limit), offset: parseInt(offset) });
+      res.json({ success: true, data: { members } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getUserGroups(req, res, next) {
+    try {
+      const { userId } = req.params;
+      const { limit = 20, offset = 0 } = req.query;
+      const groups = await socialService.getUserGroups(userId, { limit: parseInt(limit), offset: parseInt(offset) });
+      res.json({ success: true, data: { groups } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async createGroupPost(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { groupId } = req.params;
+      const { content, image_urls } = req.body;
+      const post = await socialService.createGroupPost(groupId, userId, content, image_urls);
+      res.json({ success: true, data: { post } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getGroupPosts(req, res, next) {
+    try {
+      const { groupId } = req.params;
+      const { limit = 20, offset = 0 } = req.query;
+      const posts = await socialService.getGroupPosts(groupId, { limit: parseInt(limit), offset: parseInt(offset) });
+      res.json({ success: true, data: { posts } });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new SocialController();

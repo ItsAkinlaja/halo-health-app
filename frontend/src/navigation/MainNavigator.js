@@ -23,6 +23,7 @@ import HealthReports from '../screens/main/HealthReports';
 import MealDetails from '../screens/main/MealDetails';
 import EditProfile from '../screens/main/EditProfile';
 import AICoach from '../screens/main/AICoach';
+import RestaurantMenuScanner from '../screens/main/RestaurantMenuScanner';
 import Appearance from '../screens/settings/Appearance';
 import Language from '../screens/settings/Language';
 import NotificationSettings from '../screens/settings/NotificationSettings';
@@ -150,6 +151,7 @@ const MainNavigator = () => {
       <Stack.Screen name="Terms" component={Terms} />
       <Stack.Screen name="EditProfile" component={EditProfile} />
       <Stack.Screen name="AICoach" component={AICoach} />
+      <Stack.Screen name="RestaurantMenuScanner" component={RestaurantMenuScanner} />
       
       {/* Meal Planner Screens */}
       <Stack.Screen name="MealDetails" component={MealDetails} />

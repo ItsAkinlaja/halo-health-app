@@ -195,6 +195,79 @@ class SocialService {
     return response.data;
   }
 
+  // ==================== GROUPS ====================
+  
+  async createGroup(name, description, isPrivate = false, category = null) {
+    const response = await api.post('/social/groups', {
+      name,
+      description,
+      is_private: isPrivate,
+      category,
+    });
+    return response.data;
+  }
+
+  async getGroups(category = null, search = null, limit = 20, offset = 0) {
+    const response = await api.get('/social/groups', {
+      params: { category, search, limit, offset },
+    });
+    return response.data;
+  }
+
+  async getGroup(groupId) {
+    const response = await api.get(`/social/groups/${groupId}`);
+    return response.data;
+  }
+
+  async updateGroup(groupId, updates) {
+    const response = await api.put(`/social/groups/${groupId}`, updates);
+    return response.data;
+  }
+
+  async deleteGroup(groupId) {
+    const response = await api.delete(`/social/groups/${groupId}`);
+    return response.data;
+  }
+
+  async joinGroup(groupId) {
+    const response = await api.post(`/social/groups/${groupId}/join`);
+    return response.data;
+  }
+
+  async leaveGroup(groupId) {
+    const response = await api.delete(`/social/groups/${groupId}/join`);
+    return response.data;
+  }
+
+  async getGroupMembers(groupId, limit = 50, offset = 0) {
+    const response = await api.get(`/social/groups/${groupId}/members`, {
+      params: { limit, offset },
+    });
+    return response.data;
+  }
+
+  async getUserGroups(userId, limit = 20, offset = 0) {
+    const response = await api.get(`/social/users/${userId}/groups`, {
+      params: { limit, offset },
+    });
+    return response.data;
+  }
+
+  async createGroupPost(groupId, content, imageUrls = []) {
+    const response = await api.post(`/social/groups/${groupId}/posts`, {
+      content,
+      image_urls: imageUrls,
+    });
+    return response.data;
+  }
+
+  async getGroupPosts(groupId, limit = 20, offset = 0) {
+    const response = await api.get(`/social/groups/${groupId}/posts`, {
+      params: { limit, offset },
+    });
+    return response.data;
+  }
+
   // ==================== FEATURE FLAGS ====================
   
   async getFeatureFlags() {

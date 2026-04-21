@@ -58,6 +58,15 @@ export default function Scanner({ navigation }) {
   const handleBarCodeScanned = useCallback(async ({ data, type }) => {
     if (scanned || scanning) return;
     
+    console.log('Barcode scanned:', data);
+    console.log('Active profile:', activeProfile);
+    
+    // Filter out Expo/development URLs
+    if (data.startsWith('exp://') || data.startsWith('http://') || data.startsWith('https://')) {
+      console.log('Ignoring development/web URL');
+      return;
+    }
+    
     setScanned(true);
     setScanning(true);
 
@@ -71,15 +80,28 @@ export default function Scanner({ navigation }) {
       }
 
       // Check if profile is selected
-      if (!activeProfile?.id) {
-        Alert.alert('No Profile Selected', 'Please select a profile first.');
-        setScanned(false);
-        setScanning(false);
+      if (!activeProfile || !activeProfile.id) {
+        console.warn('No active profile found:', activeProfile);
+        Alert.alert(
+          'No Profile Selected',
+          'Please select a profile from the home screen first.',
+          [
+            { text: 'Go to Home', onPress: () => navigation.navigate('Home') },
+            { text: 'Cancel', onPress: () => {
+              setScanned(false);
+              setScanning(false);
+            }}
+          ]
+        );
         return;
       }
 
+      console.log('Calling scanBarcode with profileId:', activeProfile.id);
+      
       // Call scan API
       const result = await scanService.scanBarcode(data, activeProfile.id);
+      
+      console.log('Scan result:', result);
       
       // Navigate to product details
       setTimeout(() => {
@@ -146,6 +168,10 @@ export default function Scanner({ navigation }) {
       setScanning(false);
     }
   }, [searchQuery, navigation]);
+
+  const handleMenuScan = useCallback(() => {
+    navigation.navigate('RestaurantMenuScanner');
+  }, [navigation]);
 
   const scanLineTranslate = scanLineAnim.interpolate({
     inputRange: [0, 1],
@@ -294,7 +320,13 @@ export default function Scanner({ navigation }) {
             <TouchableOpacity
               key={m.id}
               style={[styles.modeBtn, mode === m.id && styles.modeBtnActive]}
-              onPress={() => setMode(m.id)}
+              onPress={() => {
+                if (m.id === 'menu') {
+                  handleMenuScan();
+                } else {
+                  setMode(m.id);
+                }
+              }}
             >
               <Ionicons name={m.icon} size={16} color={mode === m.id ? COLORS.primary : COLORS.white} />
               <Text style={[styles.modeBtnText, mode === m.id && styles.modeBtnTextActive]}>{m.label}</Text>

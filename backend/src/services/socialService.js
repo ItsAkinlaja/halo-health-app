@@ -536,6 +536,192 @@ class SocialService {
     if (error) throw error;
     return data;
   }
+
+  // ==================== GROUPS ====================
+  
+  async createGroup(userId, groupData) {
+    const { name, description, is_private = false, category } = groupData;
+    
+    const { data, error } = await supabase
+      .from('community_groups')
+      .insert([{
+        name,
+        description,
+        is_private,
+        category,
+        created_by: userId,
+      }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    // Add creator as admin member
+    await this.joinGroup(data.id, userId, 'admin');
+    
+    return data;
+  }
+
+  async getGroup(groupId) {
+    const { data, error } = await supabase
+      .from('community_groups')
+      .select(`
+        *,
+        creator:users!created_by(id, username, avatar_url, halo_health_id)
+      `)
+      .eq('id', groupId)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+
+  async updateGroup(groupId, userId, updates) {
+    const { name, description, is_private, category } = updates;
+    
+    const { data, error } = await supabase
+      .from('community_groups')
+      .update({ name, description, is_private, category, updated_at: new Date() })
+      .eq('id', groupId)
+      .eq('created_by', userId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+
+  async deleteGroup(groupId, userId) {
+    const { error } = await supabase
+      .from('community_groups')
+      .delete()
+      .eq('id', groupId)
+      .eq('created_by', userId);
+    
+    if (error) throw error;
+    return true;
+  }
+
+  async getGroups(options = {}) {
+    const { category, search, limit = 20, offset = 0 } = options;
+    
+    let query = supabase
+      .from('community_groups')
+      .select(`
+        *,
+        creator:users!created_by(id, username, avatar_url, halo_health_id)
+      `)
+      .eq('is_private', false)
+      .order('member_count', { ascending: false })
+      .range(offset, offset + limit - 1);
+    
+    if (category) {
+      query = query.eq('category', category);
+    }
+    
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+    }
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  }
+
+  async joinGroup(groupId, userId, role = 'member') {
+    const { data, error } = await supabase
+      .from('group_members')
+      .insert([{ group_id: groupId, user_id: userId, role }])
+      .select()
+      .single();
+    
+    if (error) {
+      if (error.code === '23505') return { joined: true };
+      throw error;
+    }
+    
+    return { joined: true };
+  }
+
+  async leaveGroup(groupId, userId) {
+    const { error } = await supabase
+      .from('group_members')
+      .delete()
+      .eq('group_id', groupId)
+      .eq('user_id', userId);
+    
+    if (error) throw error;
+    return { joined: false };
+  }
+
+  async getGroupMembers(groupId, options = {}) {
+    const { limit = 50, offset = 0 } = options;
+    
+    const { data, error } = await supabase
+      .from('group_members')
+      .select(`
+        *,
+        user:users!user_id(id, username, avatar_url, halo_health_id, bio)
+      `)
+      .eq('group_id', groupId)
+      .order('joined_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+    
+    if (error) throw error;
+    return data;
+  }
+
+  async getUserGroups(userId, options = {}) {
+    const { limit = 20, offset = 0 } = options;
+    
+    const { data, error } = await supabase
+      .from('group_members')
+      .select(`
+        group:community_groups(
+          *,
+          creator:users!created_by(id, username, avatar_url, halo_health_id)
+        )
+      `)
+      .eq('user_id', userId)
+      .order('joined_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+    
+    if (error) throw error;
+    return data.map(item => item.group);
+  }
+
+  async createGroupPost(groupId, userId, content, imageUrls = []) {
+    const { data, error } = await supabase
+      .from('group_posts')
+      .insert([{
+        group_id: groupId,
+        user_id: userId,
+        content,
+        image_urls: imageUrls,
+      }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+
+  async getGroupPosts(groupId, options = {}) {
+    const { limit = 20, offset = 0 } = options;
+    
+    const { data, error } = await supabase
+      .from('group_posts')
+      .select(`
+        *,
+        user:users!user_id(id, username, avatar_url, halo_health_id)
+      `)
+      .eq('group_id', groupId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+    
+    if (error) throw error;
+    return data;
+  }
 }
 
 module.exports = new SocialService();

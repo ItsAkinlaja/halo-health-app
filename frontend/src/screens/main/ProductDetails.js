@@ -11,6 +11,8 @@ import { HaloCard } from '../../components/common/HaloCard';
 import { HaloAvatar } from '../../components/common/HaloAvatar';
 import { ScoreBadge, StatusBadge } from '../../components/common/HaloBadge';
 import { productService } from '../../services/productService';
+import AudioPlayer from '../../components/common/AudioPlayer';
+import AlternativesList from '../../components/alternatives/AlternativesList';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, getScoreColor } from '../../styles/theme';
 
 const { width: W } = Dimensions.get('window');
@@ -204,12 +206,11 @@ export default function ProductDetails({ route, navigation }) {
                       <Text style={styles.haloFrom}>Halo Says</Text>
                       <Text style={styles.haloSubtitle}>Personalized analysis</Text>
                     </View>
-                    <TouchableOpacity style={styles.audioBtn}>
-                      <Ionicons name="volume-medium-outline" size={18} color={COLORS.primary} />
-                      <Text style={styles.audioBtnText}>Listen</Text>
-                    </TouchableOpacity>
                   </View>
                   <Text style={styles.haloBody}>{product.ai_analysis}</Text>
+                  <View style={{ marginTop: SPACING.base }}>
+                    <AudioPlayer analysis={{ summary: product.ai_analysis, healthScore: product.health_score, productName: product.name }} />
+                  </View>
                 </HaloCard>
               )}
 
@@ -346,38 +347,11 @@ export default function ProductDetails({ route, navigation }) {
 
           {/* ── ALTERNATIVES TAB ── */}
           {activeTab === 'alternatives' && (
-            <>
-              {product.alternatives && product.alternatives.length > 0 ? (
-                <>
-                  <View style={styles.altHeader}>
-                    <HaloAvatar size={32} mood="excited" />
-                    <Text style={styles.altHeaderText}>Halo found {product.alternatives.length} cleaner alternatives for you</Text>
-                  </View>
-                  {product.alternatives.map((alt, i) => (
-                    <HaloCard key={i} style={styles.altCard} onPress={() => navigation.push('ProductDetails', { productId: alt.id })}>
-                      <View style={styles.altTop}>
-                        <View style={styles.altInfo}>
-                          <Text style={styles.altName}>{alt.name}</Text>
-                          <Text style={styles.altBrand}>{alt.brand}</Text>
-                        </View>
-                        <ScoreRing score={alt.health_score || 0} size={64} strokeWidth={7} />
-                      </View>
-                      <View style={styles.altImprovement}>
-                        <Ionicons name="trending-up" size={14} color={COLORS.primary} />
-                        <Text style={styles.altImprovementText}>+{(alt.health_score || 0) - (product.health_score || 0)} pts improvement</Text>
-                      </View>
-                      <Text style={styles.altReason}>{alt.reason || 'Healthier alternative'}</Text>
-                      <TouchableOpacity style={styles.altBtn}>
-                        <Text style={styles.altBtnText}>View Product</Text>
-                        <Ionicons name="arrow-forward" size={14} color={COLORS.primary} />
-                      </TouchableOpacity>
-                    </HaloCard>
-                  ))}
-                </>
-              ) : (
-                <Text style={styles.emptyText}>No alternatives available yet</Text>
-              )}
-            </>
+            <AlternativesList
+              productId={product.id}
+              profileId={activeProfile?.id}
+              onSelectAlternative={(alt) => navigation.push('ProductDetails', { productId: alt.id })}
+            />
           )}
         </View>
 

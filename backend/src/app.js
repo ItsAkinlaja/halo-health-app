@@ -18,6 +18,12 @@ const notificationRoutes = require('./routes/notifications');
 const coachRoutes = require('./routes/coach');
 const userRoutes = require('./routes/users');
 const jwksRoutes = require('./routes/jwks');
+const alternativesRoutes = require('./routes/alternatives');
+const restaurantRoutes = require('./routes/restaurant');
+const shoppingListRoutes = require('./routes/shoppingList');
+const referralRoutes = require('./routes/referral');
+const recapCardsRoutes = require('./routes/recapCards');
+const homeHealthRoutes = require('./routes/homeHealth');
 
 const { errorHandler } = require('./middleware/errorHandler');
 const { logger, performanceMonitor } = require('./utils/logger');
@@ -62,6 +68,12 @@ app.use('/api/challenges', challengeRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/coach', coachRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/alternatives', alternativesRoutes);
+app.use('/api/restaurant', restaurantRoutes);
+app.use('/api/shopping-list', shoppingListRoutes);
+app.use('/api/referral', referralRoutes);
+app.use('/api/recap-cards', recapCardsRoutes);
+app.use('/api/home-health', homeHealthRoutes);
 app.use('/.well-known', jwksRoutes);
 
 // Health check
@@ -91,6 +103,12 @@ app.get('/api', (req, res) => {
       challenges: '/api/challenges',
       notifications: '/api/notifications',
       coach: '/api/coach',
+      alternatives: '/api/alternatives',
+      restaurant: '/api/restaurant',
+      shoppingList: '/api/shopping-list',
+      referral: '/api/referral',
+      recapCards: '/api/recap-cards',
+      homeHealth: '/api/home-health',
     },
     documentation: 'https://docs.halohealth.com',
   });

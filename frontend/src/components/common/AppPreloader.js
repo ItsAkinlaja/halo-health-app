@@ -1,65 +1,38 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions, Image } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
 import { COLORS, TYPOGRAPHY, SPACING } from '../../styles/theme';
 
-const { width: W, height: H } = Dimensions.get('window');
+const { width: W } = Dimensions.get('window');
 
 export function AppPreloader({ onFinish }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Logo entrance animation
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Pulse animation
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.05,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
+    // Fade in
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 400,
+      useNativeDriver: true,
+    }).start();
 
     // Progress bar animation
     Animated.timing(progressAnim, {
       toValue: 1,
-      duration: 2500,
+      duration: 2000,
       useNativeDriver: false,
     }).start();
 
-    // Auto finish after 3 seconds
+    // Auto finish after 2 seconds
     const timer = setTimeout(() => {
       Animated.timing(fadeAnim, {
         toValue: 0,
-        duration: 400,
+        duration: 300,
         useNativeDriver: true,
       }).start(() => {
         if (onFinish) onFinish();
       });
-    }, 3000);
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, []);
@@ -71,30 +44,8 @@ export function AppPreloader({ onFinish }) {
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      {/* Background */}
-      <View style={styles.bgGradient} />
-
-      {/* Main logo */}
-      <Animated.View
-        style={[
-          styles.logoContainer,
-          {
-            transform: [{ scale: Animated.multiply(scaleAnim, pulseAnim) }],
-          },
-        ]}
-      >
-        <Image
-          source={{ uri: 'https://ik.imagekit.io/scmchurch/WhatsApp%20Image%202026-04-20%20at%2019.54.45.jpeg' }}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-      </Animated.View>
-
-      {/* Loading text */}
-      <View style={styles.textContainer}>
-        <Text style={styles.loadingText}>Loading</Text>
-        <Text style={styles.subText}>Preparing your health profile</Text>
-      </View>
+      {/* Logo Text */}
+      <Text style={styles.logoText}>Halo Health</Text>
 
       {/* Progress bar */}
       <View style={styles.progressContainer}>
@@ -110,47 +61,21 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
   },
-  bgGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: COLORS.white,
-    opacity: 1,
-  },
-  logoContainer: {
-    width: 280,
-    height: 180,
-    marginBottom: SPACING.xl,
-  },
-  logo: {
-    width: '100%',
-    height: '100%',
-  },
-  textContainer: {
-    alignItems: 'center',
+  logoText: {
+    fontSize: 56,
+    fontWeight: '300',
+    fontStyle: 'italic',
+    color: COLORS.primary,
+    letterSpacing: 2,
     marginBottom: SPACING.xxl,
   },
-  loadingText: {
-    fontSize: TYPOGRAPHY.lg,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.xs,
-  },
-  subText: {
-    fontSize: TYPOGRAPHY.sm,
-    color: COLORS.textSecondary,
-  },
   progressContainer: {
-    width: W * 0.6,
-    height: 4,
+    width: W * 0.5,
+    height: 3,
     backgroundColor: COLORS.border,
     borderRadius: 2,
     overflow: 'hidden',
-    marginBottom: SPACING.xxl,
   },
   progressBar: {
     height: '100%',

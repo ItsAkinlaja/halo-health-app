@@ -248,4 +248,90 @@ router.get('/hashtags/search', [
   validateRequest
 ], catchAsync(socialController.searchHashtags));
 
+// ==================== GROUPS ====================
+
+// Create group
+router.post('/groups', [
+  body('name').notEmpty().withMessage('Group name is required'),
+  body('description').optional(),
+  body('is_private').optional().isBoolean(),
+  body('category').optional(),
+  validateRequest
+], catchAsync(socialController.createGroup));
+
+// Get groups
+router.get('/groups', [
+  query('category').optional(),
+  query('search').optional(),
+  query('limit').optional().isInt({ min: 1, max: 50 }),
+  query('offset').optional().isInt({ min: 0 }),
+  validateRequest
+], catchAsync(socialController.getGroups));
+
+// Get single group
+router.get('/groups/:groupId', [
+  param('groupId').isUUID(),
+  validateRequest
+], catchAsync(socialController.getGroup));
+
+// Update group
+router.put('/groups/:groupId', [
+  param('groupId').isUUID(),
+  body('name').optional().notEmpty(),
+  body('description').optional(),
+  body('is_private').optional().isBoolean(),
+  body('category').optional(),
+  validateRequest
+], catchAsync(socialController.updateGroup));
+
+// Delete group
+router.delete('/groups/:groupId', [
+  param('groupId').isUUID(),
+  validateRequest
+], catchAsync(socialController.deleteGroup));
+
+// Join group
+router.post('/groups/:groupId/join', [
+  param('groupId').isUUID(),
+  validateRequest
+], catchAsync(socialController.joinGroup));
+
+// Leave group
+router.delete('/groups/:groupId/join', [
+  param('groupId').isUUID(),
+  validateRequest
+], catchAsync(socialController.leaveGroup));
+
+// Get group members
+router.get('/groups/:groupId/members', [
+  param('groupId').isUUID(),
+  query('limit').optional().isInt({ min: 1, max: 100 }),
+  query('offset').optional().isInt({ min: 0 }),
+  validateRequest
+], catchAsync(socialController.getGroupMembers));
+
+// Get user groups
+router.get('/users/:userId/groups', [
+  param('userId').isUUID(),
+  query('limit').optional().isInt({ min: 1, max: 50 }),
+  query('offset').optional().isInt({ min: 0 }),
+  validateRequest
+], catchAsync(socialController.getUserGroups));
+
+// Create group post
+router.post('/groups/:groupId/posts', [
+  param('groupId').isUUID(),
+  body('content').notEmpty().withMessage('Post content is required'),
+  body('image_urls').optional().isArray(),
+  validateRequest
+], catchAsync(socialController.createGroupPost));
+
+// Get group posts
+router.get('/groups/:groupId/posts', [
+  param('groupId').isUUID(),
+  query('limit').optional().isInt({ min: 1, max: 50 }),
+  query('offset').optional().isInt({ min: 0 }),
+  validateRequest
+], catchAsync(socialController.getGroupPosts));
+
 module.exports = router;

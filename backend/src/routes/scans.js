@@ -3,6 +3,7 @@ const { body, query, param, validationResult } = require('express-validator');
 const scanController = require('../controllers/scanController');
 const { authMiddleware } = require('../middleware/auth');
 const { catchAsync } = require('../middleware/errorHandler');
+const ttsService = require('../services/ttsService');
 
 const router = express.Router();
 
@@ -61,5 +62,17 @@ router.get('/stats', catchAsync(scanController.getScanStats));
 router.get('/:scanId', catchAsync(scanController.getScanById));
 
 router.delete('/:scanId', catchAsync(scanController.deleteScan));
+
+router.post('/audio', catchAsync(async (req, res) => {
+  const { analysis } = req.body;
+  const audio = await ttsService.generateProductAnalysisAudio(analysis);
+  
+  if (!audio) {
+    return res.status(503).json({ error: 'TTS service not available' });
+  }
+  
+  res.set('Content-Type', audio.contentType);
+  res.send(audio.audio);
+}));
 
 module.exports = router;
