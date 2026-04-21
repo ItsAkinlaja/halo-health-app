@@ -9,7 +9,7 @@ import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { ScoreRing } from '../../components/common/ScoreRing';
 import { useAppContext } from '../../context/AppContext';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../context/AuthContext';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, getScoreColor } from '../../styles/theme';
 
 const { width: W } = Dimensions.get('window');

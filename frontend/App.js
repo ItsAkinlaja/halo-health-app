@@ -15,6 +15,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AppProvider } from './src/context/AppContext';
+import { AuthProvider } from './src/context/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import ErrorBoundary from './src/components/common/ErrorBoundary';
 
@@ -29,12 +30,14 @@ export default function App() {
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
-          <AppProvider>
-            <NavigationContainer>
-              <StatusBar style="auto" />
-              <AppNavigator />
-            </NavigationContainer>
-          </AppProvider>
+          <AuthProvider>
+            <AppProvider>
+              <NavigationContainer>
+                <StatusBar style="auto" />
+                <AppNavigator />
+              </NavigationContainer>
+            </AppProvider>
+          </AuthProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </ErrorBoundary>

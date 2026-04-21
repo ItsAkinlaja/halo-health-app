@@ -10,7 +10,7 @@ import OnboardingStep5 from '../screens/onboarding/OnboardingStep5';
 import OnboardingStep6 from '../screens/onboarding/OnboardingStep6';
 import OnboardingStep7 from '../screens/onboarding/OnboardingStep7';
 import OnboardingStep8 from '../screens/onboarding/OnboardingStep8';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../context/AuthContext';
 import { OnboardingProvider, useOnboarding } from '../context/OnboardingContext';
 import { AppContext } from '../context/AppContext';
 import { profileService } from '../services/profileService';

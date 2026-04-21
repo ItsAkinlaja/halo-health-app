@@ -1,12 +1,11 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View } from 'react-native';
-import { CommonActions } from '@react-navigation/native';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import OnboardingNavigator from './OnboardingNavigator';
 import MedicalDisclaimerScreen from '../screens/common/MedicalDisclaimerScreen';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../context/AuthContext';
 import { COLORS } from '../styles/theme';
 
 const Stack = createNativeStackNavigator();
@@ -14,7 +13,6 @@ const Stack = createNativeStackNavigator();
 export default function AppNavigator() {
   const { user, isLoading, isFirstTime, needsDisclaimer } = useAuth();
 
-  // Show loading screen while checking auth
   if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background }}>
@@ -23,7 +21,6 @@ export default function AppNavigator() {
     );
   }
 
-  // Determine which screen to show
   let initialRouteName;
   if (!user) {
     initialRouteName = isFirstTime ? 'Onboarding' : 'Auth';

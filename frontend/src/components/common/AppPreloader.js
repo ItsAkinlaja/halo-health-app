@@ -1,57 +1,110 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
-import { COLORS, TYPOGRAPHY, SPACING } from '../../styles/theme';
+import { View, StyleSheet, Animated, Dimensions, Image } from 'react-native';
+import { COLORS } from '../../styles/theme';
 
 const { width: W } = Dimensions.get('window');
 
 export function AppPreloader({ onFinish }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const progressAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.1)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // Fade in
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
-
-    // Progress bar animation
-    Animated.timing(progressAnim, {
-      toValue: 1,
-      duration: 2000,
-      useNativeDriver: false,
-    }).start();
-
-    // Auto finish after 2 seconds
-    const timer = setTimeout(() => {
+    // Fade in and scale up
+    Animated.parallel([
       Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
+        toValue: 1,
+        duration: 600,
         useNativeDriver: true,
-      }).start(() => {
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1.5,
+        tension: 40,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Gentle rotation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 3000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(rotateAnim, {
+          toValue: 0,
+          duration: 3000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Pulse animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Auto finish after 2.5 seconds
+    const timer = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1.2,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
         if (onFinish) onFinish();
       });
-    }, 2000);
+    }, 2500);
 
     return () => clearTimeout(timer);
   }, []);
 
-  const progressWidth = progressAnim.interpolate({
+  const rotate = rotateAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
+    outputRange: ['0deg', '10deg'],
   });
 
   return (
-    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      {/* Logo Text */}
-      <Text style={styles.logoText}>Halo Health</Text>
-
-      {/* Progress bar */}
-      <View style={styles.progressContainer}>
-        <Animated.View style={[styles.progressBar, { width: progressWidth }]} />
-      </View>
-    </Animated.View>
+    <View style={styles.container}>
+      <Animated.View
+        style={[
+          styles.logoContainer,
+          {
+            opacity: fadeAnim,
+            transform: [
+              { scale: Animated.multiply(scaleAnim, pulseAnim) },
+              { rotate },
+            ],
+          },
+        ]}
+      >
+        <Image
+          source={{ uri: 'https://ik.imagekit.io/scmchurch/WhatsApp%20Image%202026-04-20%20at%2019.54.45.jpeg?updatedAt=1776711366598' }}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+      </Animated.View>
+    </View>
   );
 }
 
@@ -62,24 +115,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoText: {
-    fontSize: 56,
-    fontWeight: '300',
-    fontStyle: 'italic',
-    color: COLORS.primary,
-    letterSpacing: 2,
-    marginBottom: SPACING.xxl,
-  },
-  progressContainer: {
+  logoContainer: {
     width: W * 0.5,
-    height: 3,
-    backgroundColor: COLORS.border,
-    borderRadius: 2,
-    overflow: 'hidden',
+    height: W * 0.5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  progressBar: {
+  logo: {
+    width: '100%',
     height: '100%',
-    backgroundColor: COLORS.primary,
-    borderRadius: 2,
   },
 });
