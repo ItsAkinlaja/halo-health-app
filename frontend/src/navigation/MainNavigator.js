@@ -24,6 +24,9 @@ import MealDetails from '../screens/main/MealDetails';
 import EditProfile from '../screens/main/EditProfile';
 import AICoach from '../screens/main/AICoach';
 import RestaurantMenuScanner from '../screens/main/RestaurantMenuScanner';
+import RestaurantFinder from '../screens/main/RestaurantFinder';
+import WaterAnalysis from '../screens/main/WaterAnalysis';
+import SupplementTracker from '../screens/main/SupplementTracker';
 import Appearance from '../screens/settings/Appearance';
 import Language from '../screens/settings/Language';
 import NotificationSettings from '../screens/settings/NotificationSettings';
@@ -152,6 +155,9 @@ const MainNavigator = () => {
       <Stack.Screen name="EditProfile" component={EditProfile} />
       <Stack.Screen name="AICoach" component={AICoach} />
       <Stack.Screen name="RestaurantMenuScanner" component={RestaurantMenuScanner} />
+      <Stack.Screen name="RestaurantFinder" component={RestaurantFinder} />
+      <Stack.Screen name="WaterAnalysis" component={WaterAnalysis} />
+      <Stack.Screen name="SupplementTracker" component={SupplementTracker} />
       
       {/* Meal Planner Screens */}
       <Stack.Screen name="MealDetails" component={MealDetails} />

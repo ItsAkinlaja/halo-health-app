@@ -3,6 +3,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import OnboardingStep1 from '../screens/onboarding/OnboardingStep1';
 import OnboardingStep2 from '../screens/onboarding/OnboardingStep2';
 import OnboardingStep3 from '../screens/onboarding/OnboardingStep3';
+import OnboardingVoiceSelection from '../screens/onboarding/OnboardingVoiceSelection';
+import OnboardingNotificationTone from '../screens/onboarding/OnboardingNotificationTone';
 import OnboardingStep4 from '../screens/onboarding/OnboardingStep4';
 import OnboardingStep5 from '../screens/onboarding/OnboardingStep5';
 import OnboardingStep6 from '../screens/onboarding/OnboardingStep6';
@@ -34,7 +36,27 @@ const OnboardingStep3Wrapper = ({ navigation }) => {
   return (
     <OnboardingStep3
       navigation={navigation}
-      nextStep={(prefs) => { saveData('dietaryPreferences', prefs); navigation.navigate('OnboardingStep4'); }}
+      nextStep={(prefs) => { saveData('dietaryPreferences', prefs); navigation.navigate('OnboardingVoiceSelection'); }}
+    />
+  );
+};
+
+const OnboardingVoiceSelectionWrapper = ({ navigation }) => {
+  const { saveData } = useOnboarding();
+  return (
+    <OnboardingVoiceSelection
+      navigation={navigation}
+      nextStep={(voice) => { saveData('haloVoice', voice); navigation.navigate('OnboardingNotificationTone'); }}
+    />
+  );
+};
+
+const OnboardingNotificationToneWrapper = ({ navigation }) => {
+  const { saveData } = useOnboarding();
+  return (
+    <OnboardingNotificationTone
+      navigation={navigation}
+      nextStep={(tone) => { saveData('notificationTone', tone); navigation.navigate('OnboardingStep4'); }}
     />
   );
 };
@@ -147,6 +169,8 @@ function OnboardingStack() {
       <Stack.Screen name="OnboardingStep1" component={OnboardingStep1Wrapper} />
       <Stack.Screen name="OnboardingStep2" component={OnboardingStep2Wrapper} />
       <Stack.Screen name="OnboardingStep3" component={OnboardingStep3Wrapper} />
+      <Stack.Screen name="OnboardingVoiceSelection" component={OnboardingVoiceSelectionWrapper} />
+      <Stack.Screen name="OnboardingNotificationTone" component={OnboardingNotificationToneWrapper} />
       <Stack.Screen name="OnboardingStep4" component={OnboardingStep4Wrapper} />
       <Stack.Screen name="OnboardingStep5" component={OnboardingStep5Wrapper} />
       <Stack.Screen name="OnboardingStep6" component={OnboardingStep6Wrapper} />

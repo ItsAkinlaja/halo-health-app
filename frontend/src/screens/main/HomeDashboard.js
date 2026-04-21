@@ -438,9 +438,9 @@ export default function HomeDashboard({ navigation }) {
         </View>
         <View style={styles.actionsGrid}>
           {[
-            { icon: 'restaurant-outline', label: 'Restaurants', color: COLORS.accent, screen: 'Scanner' },
-            { icon: 'water-outline', label: 'Water & Filters', color: COLORS.info, screen: 'Scanner' },
-            { icon: 'fitness-outline', label: 'Supplements', color: COLORS.primary, screen: 'Scanner' },
+            { icon: 'restaurant-outline', label: 'Restaurants', color: COLORS.accent, screen: 'RestaurantFinder' },
+            { icon: 'water-outline', label: 'Water & Filters', color: COLORS.info, screen: 'WaterAnalysis' },
+            { icon: 'fitness-outline', label: 'Supplements', color: COLORS.primary, screen: 'SupplementTracker' },
             { icon: 'home-outline', label: 'Home Audit', color: COLORS.warning, screen: 'Scanner' },
           ].map((item) => (
             <TouchableOpacity

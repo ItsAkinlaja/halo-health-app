@@ -24,6 +24,8 @@ const shoppingListRoutes = require('./routes/shoppingList');
 const referralRoutes = require('./routes/referral');
 const recapCardsRoutes = require('./routes/recapCards');
 const homeHealthRoutes = require('./routes/homeHealth');
+const waterRoutes = require('./routes/water');
+const supplementRoutes = require('./routes/supplements');
 
 const { errorHandler } = require('./middleware/errorHandler');
 const { logger, performanceMonitor } = require('./utils/logger');
@@ -74,6 +76,8 @@ app.use('/api/shopping-list', shoppingListRoutes);
 app.use('/api/referral', referralRoutes);
 app.use('/api/recap-cards', recapCardsRoutes);
 app.use('/api/home-health', homeHealthRoutes);
+app.use('/api/water', waterRoutes);
+app.use('/api/supplements', supplementRoutes);
 app.use('/.well-known', jwksRoutes);
 
 // Health check
@@ -109,6 +113,8 @@ app.get('/api', (req, res) => {
       referral: '/api/referral',
       recapCards: '/api/recap-cards',
       homeHealth: '/api/home-health',
+      water: '/api/water',
+      supplements: '/api/supplements',
     },
     documentation: 'https://docs.halohealth.com',
   });
