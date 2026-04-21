@@ -11,11 +11,12 @@ export default function MedicalDisclaimerScreen({ navigation }) {
   const handleAccept = async () => {
     try {
       await storage.setItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED, true);
-      navigation.replace('MainApp');
+      // Use navigate instead of replace to ensure MainApp is in the stack
+      navigation.navigate('MainApp');
     } catch (error) {
       console.warn('Failed to save disclaimer acceptance:', error);
       // Navigate anyway
-      navigation.replace('MainApp');
+      navigation.navigate('MainApp');
     }
   };
 

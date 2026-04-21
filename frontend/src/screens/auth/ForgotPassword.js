@@ -19,7 +19,7 @@ export default function ForgotPassword({ navigation }) {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const { resetPassword } = useAuth();
+  const { sendPasswordResetOtp } = useAuth();
 
   const handleResetPassword = async () => {
     if (!email) {
@@ -29,8 +29,8 @@ export default function ForgotPassword({ navigation }) {
 
     setIsLoading(true);
     try {
-      await resetPassword(email);
-      setIsSubmitted(true);
+      await sendPasswordResetOtp(email);
+      navigation.navigate('ResetPasswordOtp', { email });
     } catch (error) {
       Alert.alert('Error', error.message);
     } finally {

@@ -31,7 +31,7 @@ class AuthController {
         throw new ConflictError('Halo Health ID already taken');
       }
 
-      // Create user in Supabase Auth
+      // Create user in Supabase Auth with email confirmation required
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -40,6 +40,7 @@ class AuthController {
             halo_health_id: haloHealthId,
             username: username || null,
           },
+          emailRedirectTo: `${process.env.CLIENT_URL}/auth/callback`,
         },
       });
 
@@ -75,9 +76,10 @@ class AuthController {
 
       res.status(201).json({
         status: 'success',
+        message: 'Registration successful. Please check your email to verify your account.',
         data: {
           user: userData,
-          tokens,
+          requiresEmailVerification: true,
         },
       });
     } catch (error) {
@@ -99,6 +101,11 @@ class AuthController {
         throw new UnauthorizedError('Invalid email or password');
       }
 
+      // Check if email is verified
+      if (!data.user.email_confirmed_at) {
+        throw new UnauthorizedError('Please verify your email before logging in. Check your inbox for the verification link.');
+      }
+
       // Get user profile data
       const { data: userData, error: userError } = await supabase
         .from('users')
@@ -109,6 +116,15 @@ class AuthController {
       if (userError) {
         throw new AppError('User profile not found', 500);
       }
+
+      // Update last login
+      await supabase
+        .from('users')
+        .update({ 
+          last_login_at: new Date().toISOString(),
+          failed_login_attempts: 0
+        })
+        .eq('id', data.user.id);
 
       // Generate JWT tokens
       const tokens = this.generateTokens(data.user.id);
@@ -136,7 +152,7 @@ class AuthController {
       }
 
       // Verify refresh token
-      const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+      const decoded = verifyToken(refreshToken);
 
       // Get user from database
       const { data: user, error } = await supabase
@@ -165,8 +181,19 @@ class AuthController {
 
   async logout(req, res, next) {
     try {
-      // In a real implementation, you would invalidate the token
-      // For now, we'll just return success
+      const userId = req.user?.id;
+      
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        logger.error('Supabase logout error:', error);
+      }
+
+      if (userId) {
+        logger.info(`User logged out: ${userId}`);
+      }
+
       res.json({
         status: 'success',
         message: 'Logged out successfully',
@@ -199,10 +226,14 @@ class AuthController {
 
   async resetPassword(req, res, next) {
     try {
-      const { token, password } = req.body;
+      const { password } = req.body;
+      const userId = req.user?.id;
 
-      // In a real implementation, you would verify the token
-      // For now, we'll use Supabase's built-in reset functionality
+      if (!userId) {
+        throw new UnauthorizedError('Invalid reset token');
+      }
+
+      // Update password
       const { error } = await supabase.auth.updateUser({
         password: password,
       });
@@ -210,6 +241,8 @@ class AuthController {
       if (error) {
         throw new AppError(error.message, 400);
       }
+
+      logger.info(`Password reset for user: ${userId}`);
 
       res.json({
         status: 'success',

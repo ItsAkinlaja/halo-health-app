@@ -114,7 +114,10 @@ scripts/                 # Development scripts
 ### Core Functionality
 - **Barcode Scanning** - Instant product analysis
 - **Photo Scanning** - OCR for ingredient labels
+- **Restaurant Finder** - Seed oil-free restaurant discovery with map
 - **Restaurant Menu Analysis** - Health scoring for menu items
+- **Water & Filter Testing** - Comprehensive water quality analysis
+- **Supplement Tracker** - Track and analyze supplement quality
 - **Personal Health Profiles** - Family member management
 - **AI Coach (Halo)** - Personalized health guidance
 - **Voice Interface** - Hands-free operation
@@ -124,8 +127,9 @@ scripts/                 # Development scripts
 - **Social Features** - Community and sharing
 - **Health Score Tracking** - Comprehensive health metrics
 - **Product Recommendations** - Smart alternative suggestions
-- **Notification System** - Recall alerts and health tips
+- **Shopping Lists** - Organized product lists
 - **Referral Program** - User growth and earnings
+- **Notification System** - Recall alerts and health tips
 
 ## Development
 
@@ -180,6 +184,17 @@ EXPO_PUBLIC_API_URL=http://localhost:3001
 - `GET /api/products/barcode/:barcode` - Get product by barcode
 - `POST /api/scans/barcode` - Scan product by barcode
 - `POST /api/scans/photo` - Scan product by photo
+
+### Restaurant Endpoints
+- `GET /api/restaurant/search` - Search restaurants
+- `GET /api/restaurant/:id` - Get restaurant details
+- `POST /api/restaurant/scan-menu` - Scan restaurant menu
+
+### Water & Supplement Endpoints
+- `GET /api/water/search` - Search water products
+- `GET /api/water/top-rated` - Get top rated water products
+- `GET /api/supplements/search` - Search supplements
+- `GET /api/supplements/my-supplements` - Get user's supplements
 
 ### Health Check
 - `GET /health` - Server health status

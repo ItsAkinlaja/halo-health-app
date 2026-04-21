@@ -18,6 +18,7 @@ export function useAuth() {
 
   useEffect(() => {
     let mounted = true;
+    let hasInitialized = false;
     
     checkSession();
 
@@ -25,27 +26,24 @@ export function useAuth() {
       async (event, session) => {
         if (!mounted) return;
         
-        console.log('Auth state changed:', event);
-        
-        // Skip INITIAL_SESSION as it's handled by checkSession
+        // Skip INITIAL_SESSION completely - checkSession handles it
         if (event === 'INITIAL_SESSION') {
           return;
         }
         
+        console.log('Auth state changed:', event);
+        
         if (event === 'SIGNED_OUT') {
-          // User signed out
           syncUser(null);
           await storage.removeItem(STORAGE_KEYS.USER_SESSION);
           setIsFirstTime(false);
           setNeedsDisclaimer(false);
           setIsLoading(false);
         } else if (event === 'SIGNED_IN') {
-          // User signed in - only update if different user or not initialized
-          if (session?.user && (!isInitialized || session.user.id !== user?.id)) {
+          if (session?.user) {
             syncUser(session.user);
             await storage.setItem(STORAGE_KEYS.USER_SESSION, session);
             
-            // Check onboarding status
             const onboardingCompleted = await storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
             const disclaimerAccepted = await storage.getItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED);
             
@@ -54,12 +52,10 @@ export function useAuth() {
             setIsLoading(false);
           }
         } else if (event === 'TOKEN_REFRESHED') {
-          // Token refreshed - just update session, don't trigger navigation
           if (session?.user) {
             await storage.setItem(STORAGE_KEYS.USER_SESSION, session);
           }
         } else if (event === 'USER_UPDATED') {
-          // User data updated
           if (session?.user) {
             syncUser(session.user);
           }
@@ -71,7 +67,7 @@ export function useAuth() {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [isInitialized, user?.id]);
+  }, []);
 
   const checkSession = async () => {
     try {
@@ -127,11 +123,30 @@ export function useAuth() {
       password,
       options: {
         data: userData,
+        emailRedirectTo: 'halohealth://auth/callback',
       },
     });
 
     if (error) throw error;
     return data;
+  };
+
+  const verifyOtp = async (email, token) => {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'email',
+    });
+    if (error) throw error;
+    return data;
+  };
+
+  const resendOtp = async (email) => {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+    });
+    if (error) throw error;
   };
 
   const signOut = async () => {
@@ -163,11 +178,25 @@ export function useAuth() {
     }
   };
 
-  const resetPassword = async (email) => {
+  const sendPasswordResetOtp = async (email) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'halohealth://reset-password',
+      redirectTo: 'halohealth://auth/callback',
     });
     if (error) throw error;
+  };
+
+  const resetPasswordWithOtp = async (email, token, newPassword) => {
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'recovery',
+    });
+    if (error) throw error;
+
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    if (updateError) throw updateError;
   };
 
   const completeOnboarding = async () => {
@@ -187,7 +216,10 @@ export function useAuth() {
     signIn,
     signUp,
     signOut,
-    resetPassword,
+    verifyOtp,
+    resendOtp,
+    sendPasswordResetOtp,
+    resetPasswordWithOtp,
     completeOnboarding,
   };
 }
