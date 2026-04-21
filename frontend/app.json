@@ -1,0 +1,82 @@
+{
+  "expo": {
+    "name": "Halo Health",
+    "slug": "halo-health",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#00B386"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.halohealth.app",
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Halo Health needs camera access to scan product barcodes and ingredient labels for health analysis.",
+        "NSMicrophoneUsageDescription": "Halo Health needs microphone access for voice commands and AI coach interactions.",
+        "NSPhotoLibraryUsageDescription": "Halo Health needs photo library access to save and share product scan results.",
+        "NSLocationWhenInUseUsageDescription": "Halo Health uses your location to find nearby healthy food options and stores.",
+        "NSUserTrackingUsageDescription": "This allows us to provide personalized health recommendations and improve your experience."
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.halohealth.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#00B386"
+      },
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Halo Health to access your camera to scan product barcodes and ingredient labels."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#00B386",
+          "sounds": [
+            "./assets/sounds/notification.wav"
+          ]
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow Halo Health to access your microphone for voice commands and AI coach."
+        }
+      ]
+    ],
+    "runtimeVersion": "54.0.0",
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id"
+      }
+    }
+  }
+}

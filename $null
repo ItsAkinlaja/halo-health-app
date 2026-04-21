@@ -1,0 +1,379 @@
+= : The term '=' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the 
+spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:1
++ = Get-Content development-deployment.md
++ ~
+    + CategoryInfo          : ObjectNotFound: (=:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
+Cannot index into a null array.
+At line:1 char:361
++ ... =50;$i -le 102;$i++){Write-Output ('{0}: {1}' -f ($i+1), $lines[$i])}
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : NullArray
+ 
