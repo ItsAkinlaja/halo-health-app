@@ -66,6 +66,7 @@ export default function Profile({ navigation }) {
       items: [
         { icon: 'notifications-outline', label: 'Notifications', screen: 'Notifications' },
         { icon: 'settings-outline', label: 'Settings', screen: 'Settings' },
+        { icon: 'log-out-outline', label: 'Sign Out', action: handleSignOut },
       ],
     },
   ];
@@ -177,7 +178,7 @@ export default function Profile({ navigation }) {
                     styles.menuItem,
                     itemIdx !== section.items.length - 1 && styles.menuItemBorder,
                   ]}
-                  onPress={() => navigation.navigate(item.screen)}
+                  onPress={() => item.action ? item.action() : navigation.navigate(item.screen)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.menuLeft}>
@@ -199,15 +200,6 @@ export default function Profile({ navigation }) {
             </Card>
           </View>
         ))}
-
-        {/* Sign Out Button */}
-        <TouchableOpacity style={styles.signOutBtn} activeOpacity={0.7} onPress={handleSignOut}>
-          <Ionicons name="log-out-outline" size={20} color={COLORS.error} />
-          <Text style={styles.signOutText}>Sign Out</Text>
-        </TouchableOpacity>
-
-        {/* App Version */}
-        <Text style={styles.versionText}>Halo Health v1.0.0</Text>
 
         <View style={{ height: SPACING.xxxl }} />
       </ScrollView>
@@ -440,32 +432,5 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.xs,
     fontWeight: '700',
     color: COLORS.white,
-  },
-
-  // Sign Out
-  signOutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    backgroundColor: COLORS.error + '10',
-    borderRadius: RADIUS.lg,
-    padding: SPACING.base,
-    marginTop: SPACING.lg,
-    borderWidth: 1,
-    borderColor: COLORS.error + '20',
-  },
-  signOutText: {
-    fontSize: TYPOGRAPHY.base,
-    fontWeight: '700',
-    color: COLORS.error,
-  },
-
-  // Version
-  versionText: {
-    fontSize: TYPOGRAPHY.xs,
-    color: COLORS.textTertiary,
-    textAlign: 'center',
-    marginTop: SPACING.lg,
   },
 });

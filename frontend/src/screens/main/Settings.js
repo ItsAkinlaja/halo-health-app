@@ -3,13 +3,100 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import { Card } from '../../components/common/Card';
 import { supabase } from '../../services/supabase';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../styles/theme';
 
 export default function Settings({ navigation }) {
   const { user } = useAppContext();
-  const [signingOut, setSigningOut] = useState(false);
+  const { signOut, checkBiometricSupport, authenticateWithBiometrics, enableBiometricLogin, disableBiometricLogin, getBiometricCredentials, deleteAccount } = useAuth();
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+
+  React.useEffect(() => {
+    checkBiometricStatus();
+  }, []);
+
+  const checkBiometricStatus = async () => {
+    const credentials = await getBiometricCredentials();
+    setBiometricEnabled(!!credentials);
+  };
+
+  const handleToggleBiometric = async () => {
+    const { compatible, enrolled } = await checkBiometricSupport();
+    
+    if (!compatible || !enrolled) {
+      Alert.alert('Not Available', 'Biometric authentication is not available on this device');
+      return;
+    }
+
+    if (biometricEnabled) {
+      Alert.alert(
+        'Disable Biometric Login',
+        'Are you sure you want to disable biometric login?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Disable',
+            style: 'destructive',
+            onPress: async () => {
+              await disableBiometricLogin();
+              setBiometricEnabled(false);
+              Alert.alert('Success', 'Biometric login has been disabled');
+            },
+          },
+        ]
+      );
+    } else {
+      const success = await authenticateWithBiometrics();
+      if (success) {
+        Alert.prompt(
+          'Enable Biometric Login',
+          'Enter your password to enable biometric authentication',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Enable',
+              onPress: async (password) => {
+                if (password && user?.email) {
+                  await enableBiometricLogin(user.email, password);
+                  setBiometricEnabled(true);
+                  Alert.alert('Success', 'Biometric login has been enabled');
+                } else {
+                  Alert.alert('Error', 'Password is required');
+                }
+              },
+            },
+          ],
+          'secure-text'
+        );
+      } else {
+        Alert.alert('Authentication Failed', 'Could not verify your identity');
+      }
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account and all associated data. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAccount();
+            } catch (error) {
+              console.error('Delete account error:', error);
+              Alert.alert('Error', 'Failed to delete account. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const handleSignOut = async () => {
     Alert.alert(
@@ -22,13 +109,10 @@ export default function Settings({ navigation }) {
           style: 'destructive',
           onPress: async () => {
             try {
-              setSigningOut(true);
-              await supabase.auth.signOut();
-              // Navigation will be handled by auth state listener
+              await signOut();
             } catch (error) {
               console.error('Sign out error:', error);
               Alert.alert('Error', 'Failed to sign out. Please try again.');
-              setSigningOut(false);
             }
           },
         },
@@ -42,6 +126,7 @@ export default function Settings({ navigation }) {
       items: [
         { icon: 'person-outline', label: 'Personal Information', screen: 'PersonalInfo' },
         { icon: 'notifications-outline', label: 'Notifications', screen: 'Notifications' },
+        { icon: 'finger-print', label: biometricEnabled ? 'Disable Biometric Login' : 'Enable Biometric Login', action: handleToggleBiometric },
       ],
     },
     {
@@ -88,7 +173,7 @@ export default function Settings({ navigation }) {
                     styles.settingItem,
                     itemIdx !== section.items.length - 1 && styles.settingItemBorder,
                   ]}
-                  onPress={() => navigation.navigate(item.screen)}
+                  onPress={() => item.action ? item.action() : navigation.navigate(item.screen)}
                 >
                   <View style={styles.settingLeft}>
                     <View style={styles.iconWrap}>
@@ -104,11 +189,10 @@ export default function Settings({ navigation }) {
         ))}
 
         <TouchableOpacity 
-          style={styles.logoutBtn}
-          onPress={handleSignOut}
-          disabled={signingOut}
+          style={styles.deleteBtn}
+          onPress={handleDeleteAccount}
         >
-          <Text style={styles.logoutText}>{signingOut ? 'Signing Out...' : 'Sign Out'}</Text>
+          <Text style={styles.deleteText}>Delete Account</Text>
         </TouchableOpacity>
 
         <View style={styles.versionContainer}>
@@ -185,18 +269,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.textPrimary,
   },
-  logoutBtn: {
-    backgroundColor: COLORS.error + '10',
+  deleteBtn: {
+    backgroundColor: COLORS.error + '15',
     borderRadius: RADIUS.lg,
     padding: SPACING.base,
     alignItems: 'center',
     marginTop: SPACING.xl,
     borderWidth: 1,
-    borderColor: COLORS.error + '20',
+    borderColor: COLORS.error + '30',
   },
-  logoutText: {
-    fontSize: TYPOGRAPHY.base,
-    fontWeight: '700',
+  deleteText: {
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: '600',
     color: COLORS.error,
   },
   versionContainer: {

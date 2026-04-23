@@ -40,12 +40,17 @@ class AuthController {
             halo_health_id: haloHealthId,
             username: username || null,
           },
-          emailRedirectTo: `${process.env.CLIENT_URL}/auth/callback`,
+          emailRedirectTo: `${process.env.CLIENT_URL || 'halohealth://auth'}/callback`,
         },
       });
 
       if (authError) {
         throw new AppError(authError.message, 400);
+      }
+
+      // Check if email confirmation is required
+      if (!authData.user) {
+        throw new AppError('Failed to create user', 500);
       }
 
       // Create user profile in database
@@ -273,6 +278,72 @@ class AuthController {
         data: {
           user,
         },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async checkHaloIdAvailability(req, res, next) {
+    try {
+      const { haloHealthId } = req.query;
+
+      if (!haloHealthId) {
+        throw new AppError('Halo Health ID is required', 400);
+      }
+
+      // Check if ID exists
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('halo_health_id', haloHealthId)
+        .single();
+
+      if (existingUser) {
+        // Generate suggestions
+        const suggestions = [];
+        for (let i = 1; i <= 3; i++) {
+          const randomNum = Math.floor(Math.random() * 999);
+          suggestions.push(`${haloHealthId}${randomNum}`);
+        }
+
+        return res.json({
+          status: 'success',
+          available: false,
+          suggestions,
+        });
+      }
+
+      res.json({
+        status: 'success',
+        available: true,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async deleteAccount(req, res, next) {
+    try {
+      const userId = req.user?.id;
+
+      if (!userId) {
+        throw new UnauthorizedError('User not authenticated');
+      }
+
+      // Delete user from auth.users using service role (this should cascade to users table)
+      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+      
+      if (authError) {
+        logger.error('Auth user deletion error:', authError);
+        throw new AppError('Failed to delete account', 500);
+      }
+
+      logger.info(`User account deleted: ${userId}`);
+
+      res.json({
+        status: 'success',
+        message: 'Account deleted successfully',
       });
     } catch (error) {
       next(error);

@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, TextInput, StyleSheet, KeyboardAvoidingView,
-  Platform, ScrollView, StatusBar, TouchableOpacity, Image,
+  Platform, ScrollView, StatusBar, TouchableOpacity, Image, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,7 +17,35 @@ export default function Login({ navigation, route }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [focusedField, setFocusedField] = useState(null);
-  const { signIn } = useAuth();
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const { signIn, checkBiometricSupport, authenticateWithBiometrics, getBiometricCredentials, enableBiometricLogin } = useAuth();
+
+  useEffect(() => {
+    checkBiometric();
+  }, []);
+
+  const checkBiometric = async () => {
+    const { compatible, enrolled } = await checkBiometricSupport();
+    const credentials = await getBiometricCredentials();
+    setBiometricAvailable(compatible && enrolled && credentials);
+  };
+
+  const handleBiometricLogin = async () => {
+    try {
+      const success = await authenticateWithBiometrics();
+      if (success) {
+        const credentials = await getBiometricCredentials();
+        if (credentials) {
+          setIsLoading(true);
+          await signIn(credentials.email, credentials.password);
+        }
+      }
+    } catch (err) {
+      Alert.alert('Authentication Failed', 'Could not authenticate with biometrics');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogin = useCallback(async () => {
     if (!email.trim() || !password) {
@@ -27,15 +55,20 @@ export default function Login({ navigation, route }) {
     setError(null);
     setIsLoading(true);
     try {
-      await signIn(email.trim(), password);
+      console.log('Attempting login...');
+      const result = await signIn(email.trim(), password);
+      console.log('Login successful:', result?.user?.email);
     } catch (err) {
+      console.error('Login error:', err);
       const msg = err?.message?.toLowerCase() || '';
       if (msg.includes('invalid') || err?.status === 400 || err?.status === 401) {
         setError('Incorrect email or password');
+      } else if (msg.includes('email') && msg.includes('confirm')) {
+        setError('Please verify your email before logging in');
       } else if (msg.includes('network')) {
         setError('No internet connection');
       } else {
-        setError('Something went wrong. Please try again');
+        setError(err?.message || 'Something went wrong. Please try again');
       }
     } finally {
       setIsLoading(false);
@@ -169,6 +202,17 @@ export default function Login({ navigation, route }) {
                 icon="arrow-forward"
                 iconPosition="right"
               />
+
+              {biometricAvailable && (
+                <TouchableOpacity
+                  style={styles.biometricBtn}
+                  onPress={handleBiometricLogin}
+                  disabled={isLoading}
+                >
+                  <Ionicons name="finger-print" size={24} color={COLORS.primary} />
+                  <Text style={styles.biometricText}>Sign in with biometrics</Text>
+                </TouchableOpacity>
+              )}
 
               <View style={styles.divider}>
                 <View style={styles.dividerLine} />

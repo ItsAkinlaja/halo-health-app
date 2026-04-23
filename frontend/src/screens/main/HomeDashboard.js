@@ -118,6 +118,7 @@ export default function HomeDashboard({ navigation }) {
   }, [activeProfile]);
 
   const displayName = activeProfile?.name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'there';
+  const capitalizedName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
 
   if (loading && !refreshing) {
     return (
@@ -155,11 +156,11 @@ export default function HomeDashboard({ navigation }) {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
+              <Text style={styles.avatarText}>{capitalizedName.charAt(0).toUpperCase()}</Text>
             </View>
             <View style={styles.headerText}>
               <Text style={styles.greeting}>{getGreeting()}</Text>
-              <Text style={styles.userName}>{displayName}</Text>
+              <Text style={styles.userName}>{capitalizedName}</Text>
             </View>
           </View>
           <View style={styles.headerRight}>

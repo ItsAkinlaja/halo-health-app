@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, StatusBar,
+  KeyboardAvoidingView, Platform, ScrollView, StatusBar, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,13 +15,57 @@ export default function Register({ navigation }) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [haloHealthId, setHaloHealthId] = useState('');
-  const [username, setUsername] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingId, setIsCheckingId] = useState(false);
+  const [idAvailable, setIdAvailable] = useState(null);
+  const [suggestedIds, setSuggestedIds] = useState([]);
   const [error, setError] = useState(null);
   const [focusedField, setFocusedField] = useState(null);
   const { signUp } = useAuth();
+
+  const checkHaloIdAvailability = async (id) => {
+    if (!id || id.length < 3) {
+      setIdAvailable(null);
+      setSuggestedIds([]);
+      return;
+    }
+
+    setIsCheckingId(true);
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/check-halo-id?haloHealthId=${id}`);
+      const data = await response.json();
+      
+      if (data.available) {
+        setIdAvailable(true);
+        setSuggestedIds([]);
+      } else {
+        setIdAvailable(false);
+        setSuggestedIds(data.suggestions || []);
+      }
+    } catch (err) {
+      console.error('Error checking ID:', err);
+      setIdAvailable(null);
+      setSuggestedIds([]);
+    } finally {
+      setIsCheckingId(false);
+    }
+  };
+
+  const handleHaloIdChange = (text) => {
+    const sanitized = text.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    setHaloHealthId(sanitized);
+    setIdAvailable(null);
+    setSuggestedIds([]);
+  };
+
+  const handleHaloIdBlur = () => {
+    setFocusedField(null);
+    if (haloHealthId.length >= 3) {
+      checkHaloIdAvailability(haloHealthId);
+    }
+  };
 
   const handleRegister = async () => {
     setError(null);
@@ -46,14 +90,20 @@ export default function Register({ navigation }) {
       return;
     }
 
+    if (idAvailable === false) {
+      setError('This Halo Health ID is already taken. Please choose another.');
+      return;
+    }
+
     setIsLoading(true);
     try {
       await signUp(email, password, {
         halo_health_id: haloHealthId,
-        username: username || null,
       });
       
-      navigation.navigate('VerifyEmail', { email });
+      navigation.navigate('Login', { 
+        successMessage: 'Account created successfully! Please sign in.' 
+      });
     } catch (err) {
       let errorMsg = err.message;
       
@@ -61,6 +111,9 @@ export default function Register({ navigation }) {
         errorMsg = 'Too many signup attempts. Please wait a few minutes.';
       } else if (errorMsg?.toLowerCase().includes('already registered')) {
         errorMsg = 'An account with this email already exists.';
+      } else if (errorMsg?.toLowerCase().includes('halo health id already taken')) {
+        errorMsg = 'This Halo Health ID is already taken.';
+        setIdAvailable(false);
       } else if (errorMsg?.toLowerCase().includes('invalid')) {
         errorMsg = 'Invalid email or password format.';
       }
@@ -146,6 +199,8 @@ export default function Register({ navigation }) {
                 <View style={[
                   styles.inputWrap,
                   focusedField === 'haloId' && styles.inputWrapFocused,
+                  idAvailable === true && styles.inputWrapSuccess,
+                  idAvailable === false && styles.inputWrapError,
                 ]}>
                   <Ionicons
                     name="at-outline"
@@ -156,42 +211,52 @@ export default function Register({ navigation }) {
                   <TextInput
                     style={styles.input}
                     value={haloHealthId}
-                    onChangeText={setHaloHealthId}
+                    onChangeText={handleHaloIdChange}
                     placeholder="Choose your unique ID"
                     placeholderTextColor={COLORS.textTertiary}
                     autoCapitalize="none"
                     autoCorrect={false}
                     onFocus={() => setFocusedField('haloId')}
-                    onBlur={() => setFocusedField(null)}
+                    onBlur={handleHaloIdBlur}
                   />
+                  {isCheckingId && (
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                  )}
+                  {!isCheckingId && idAvailable === true && (
+                    <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+                  )}
+                  {!isCheckingId && idAvailable === false && (
+                    <Ionicons name="close-circle" size={20} color={COLORS.error} />
+                  )}
                 </View>
-              </View>
-
-              {/* Username Input */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Username (optional)</Text>
-                <View style={[
-                  styles.inputWrap,
-                  focusedField === 'username' && styles.inputWrapFocused,
-                ]}>
-                  <Ionicons
-                    name="person-outline"
-                    size={18}
-                    color={focusedField === 'username' ? COLORS.primary : COLORS.textTertiary}
-                    style={styles.inputIcon}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    value={username}
-                    onChangeText={setUsername}
-                    placeholder="Display name"
-                    placeholderTextColor={COLORS.textTertiary}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    onFocus={() => setFocusedField('username')}
-                    onBlur={() => setFocusedField(null)}
-                  />
-                </View>
+                {idAvailable === true && (
+                  <Text style={styles.successHint}>This ID is available!</Text>
+                )}
+                {idAvailable === false && (
+                  <View style={styles.idTakenContainer}>
+                    <Text style={styles.errorHint}>This ID is already taken</Text>
+                    {suggestedIds.length > 0 && (
+                      <View style={styles.suggestionsContainer}>
+                        <Text style={styles.suggestionsLabel}>Try these:</Text>
+                        <View style={styles.suggestionsRow}>
+                          {suggestedIds.map((suggestion, idx) => (
+                            <TouchableOpacity
+                              key={idx}
+                              style={styles.suggestionChip}
+                              onPress={() => {
+                                setHaloHealthId(suggestion);
+                                checkHaloIdAvailability(suggestion);
+                              }}
+                            >
+                              <Text style={styles.suggestionText}>{suggestion}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                )}
+                <Text style={styles.hint}>Only lowercase letters, numbers, and underscores</Text>
               </View>
 
               {/* Password Input */}
@@ -402,6 +467,12 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
     backgroundColor: COLORS.primaryLight,
   },
+  inputWrapError: {
+    borderColor: COLORS.error,
+  },
+  inputWrapSuccess: {
+    borderColor: COLORS.success,
+  },
   inputIcon: {
     marginRight: SPACING.sm,
   },
@@ -413,6 +484,52 @@ const styles = StyleSheet.create({
   },
   eyeBtn: {
     padding: SPACING.sm,
+  },
+  hint: {
+    fontSize: TYPOGRAPHY.xs,
+    color: COLORS.textTertiary,
+    marginTop: SPACING.xs,
+  },
+  successHint: {
+    fontSize: TYPOGRAPHY.xs,
+    color: COLORS.success,
+    marginTop: SPACING.xs,
+    fontWeight: '600',
+  },
+  errorHint: {
+    fontSize: TYPOGRAPHY.xs,
+    color: COLORS.error,
+    marginTop: SPACING.xs,
+    fontWeight: '600',
+  },
+  idTakenContainer: {
+    marginTop: SPACING.xs,
+  },
+  suggestionsContainer: {
+    marginTop: SPACING.sm,
+  },
+  suggestionsLabel: {
+    fontSize: TYPOGRAPHY.xs,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
+  },
+  suggestionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.xs,
+  },
+  suggestionChip: {
+    backgroundColor: COLORS.primaryLight,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '30',
+  },
+  suggestionText: {
+    fontSize: TYPOGRAPHY.sm,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
 
   // Terms

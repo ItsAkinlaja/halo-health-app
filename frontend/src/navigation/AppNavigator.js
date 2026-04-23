@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View } from 'react-native';
 import AuthNavigator from './AuthNavigator';
@@ -13,6 +13,16 @@ const Stack = createNativeStackNavigator();
 export default function AppNavigator() {
   const { user, isLoading, isFirstTime, needsDisclaimer } = useAuth();
 
+  useEffect(() => {
+    console.log('AppNavigator state:', { 
+      hasUser: !!user, 
+      isLoading, 
+      isFirstTime, 
+      needsDisclaimer,
+      userEmail: user?.email 
+    });
+  }, [user, isLoading, isFirstTime, needsDisclaimer]);
+
   if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background }}>
@@ -21,18 +31,19 @@ export default function AppNavigator() {
     );
   }
 
-  let initialRouteName;
-  if (!user) {
-    initialRouteName = isFirstTime ? 'Onboarding' : 'Auth';
-  } else if (needsDisclaimer) {
-    initialRouteName = 'MedicalDisclaimer';
-  } else {
-    initialRouteName = 'MainApp';
-  }
+  const getInitialRoute = () => {
+    if (!user) return 'Auth';
+    if (isFirstTime) return 'Onboarding';
+    if (needsDisclaimer) return 'MedicalDisclaimer';
+    return 'MainApp';
+  };
+
+  const initialRouteName = getInitialRoute();
+  console.log('Rendering AppNavigator with initialRoute:', initialRouteName);
 
   return (
     <Stack.Navigator 
-      key={initialRouteName}
+      key={`nav-${initialRouteName}-${user?.id || 'no-user'}`}
       initialRouteName={initialRouteName}
       screenOptions={{ headerShown: false }}
     >

@@ -67,5 +67,7 @@ router.post('/reset-password', authMiddleware, [
 ], catchAsync(authController.resetPassword));
 
 router.get('/me', authMiddleware, catchAsync(authController.getCurrentUser));
+router.get('/check-halo-id', catchAsync(authController.checkHaloIdAvailability));
+router.delete('/delete-account', authMiddleware, catchAsync(authController.deleteAccount));
 
 module.exports = router;

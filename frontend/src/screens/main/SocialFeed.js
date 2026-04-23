@@ -1,98 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  StatusBar, FlatList, ActivityIndicator, RefreshControl,
+  StatusBar, ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { HaloCard } from '../../components/common/HaloCard';
 import { ScoreBadge } from '../../components/common/HaloBadge';
 import { useAppContext } from '../../context/AppContext';
+import { socialService } from '../../services/socialService';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../styles/theme';
-
-// ---------------------------------------------------------------------------
-// Mock data — replace with api.get('/api/community/posts') when backend ready
-// ---------------------------------------------------------------------------
-const MOCK_POSTS = [
-  {
-    id: '1',
-    author: 'Sarah Chen',
-    handle: '@sarahclean',
-    initials: 'SC',
-    avatarColor: '#4A90D9',
-    time: '2h ago',
-    type: 'scan',
-    content: 'Just scanned this cereal my kids have been eating for years. Score: 6/100. Switching to a cleaner alternative immediately. The BHT alone is enough reason.',
-    score: 6,
-    productName: 'Fruity Protein Cereal',
-    likes: 142,
-    comments: 38,
-    shares: 24,
-    liked: false,
-    saved: false,
-    tags: ['CleanSwap', 'KidsHealth', 'SeedOilFree'],
-  },
-  {
-    id: '2',
-    author: 'Mike Johnson',
-    handle: '@mikehealthcoach',
-    initials: 'MJ',
-    avatarColor: '#27AE60',
-    time: '5h ago',
-    type: 'milestone',
-    content: 'My Health Score hit 85 this week. Started at 42 three months ago. The biggest change? Swapping seed oils and cutting processed cereals. Halo made it easy to see what was actually in my food.',
-    score: 85,
-    likes: 287,
-    comments: 64,
-    shares: 51,
-    liked: false,
-    saved: true,
-    tags: ['HealthScore', 'CleanLiving', 'Progress'],
-  },
-  {
-    id: '3',
-    author: 'Emma Rodriguez',
-    handle: '@emmaeats',
-    initials: 'ER',
-    avatarColor: '#8E44AD',
-    time: '1d ago',
-    type: 'tip',
-    content: 'PSA: "Natural Flavors" on a label can legally mean over 100 different chemical compounds. Halo flags this on every scan. Always tap the ingredient to see what it actually means for your body.',
-    likes: 523,
-    comments: 89,
-    shares: 201,
-    liked: false,
-    saved: false,
-    tags: ['IngredientTruth', 'FoodLabel', 'KnowYourFood'],
-  },
-  {
-    id: '4',
-    author: 'David Park',
-    handle: '@davidwellness',
-    initials: 'DP',
-    avatarColor: '#E67E22',
-    time: '2d ago',
-    type: 'scan',
-    content: 'Scanned my protein powder and was surprised — score of 74. Clean ingredient list, no artificial sweeteners. This is my new go-to.',
-    score: 74,
-    productName: 'Whey Protein Isolate',
-    likes: 98,
-    comments: 21,
-    shares: 15,
-    liked: false,
-    saved: false,
-    tags: ['Fitness', 'CleanProtein'],
-  },
-];
-
-const MOCK_STORIES = [
-  { id: 'own', name: 'Your Story', initials: 'ME', avatarColor: COLORS.primary, isOwn: true },
-  { id: '2', name: 'Sarah C.', initials: 'SC', avatarColor: '#4A90D9', hasNew: true },
-  { id: '3', name: 'Mike J.', initials: 'MJ', avatarColor: '#27AE60', hasNew: true },
-  { id: '4', name: 'Emma R.', initials: 'ER', avatarColor: '#8E44AD', hasNew: false },
-  { id: '5', name: 'David P.', initials: 'DP', avatarColor: '#E67E22', hasNew: true },
-];
-// ---------------------------------------------------------------------------
 
 const TABS = ['Discover', 'Following'];
 
@@ -107,32 +24,19 @@ function Avatar({ initials, color, size = 40 }) {
   );
 }
 
-function StoryCircle({ story }) {
-  return (
-    <TouchableOpacity style={styles.storyItem}>
-      <View style={[styles.storyRing, story.hasNew && styles.storyRingActive]}>
-        <Avatar initials={story.initials} color={story.avatarColor} size={52} />
-        {story.isOwn && (
-          <View style={styles.storyAddBtn}>
-            <Ionicons name="add" size={10} color={COLORS.white} />
-          </View>
-        )}
-      </View>
-      <Text style={styles.storyName} numberOfLines={1}>{story.name}</Text>
-    </TouchableOpacity>
-  );
-}
-
-function PostCard({ post, onLike, onSave }) {
+function PostCard({ post, onLike, onSave, onComment }) {
   const scoreColor = post.score >= 60 ? COLORS.scoreExcellent : COLORS.scoreAvoid;
+  const author = post.author || {};
+  const initials = author.name ? author.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'U';
+  const avatarColor = author.avatar_color || COLORS.primary;
 
   return (
     <HaloCard style={styles.postCard}>
       <View style={styles.postHeader}>
-        <Avatar initials={post.initials} color={post.avatarColor} size={40} />
+        <Avatar initials={initials} color={avatarColor} size={40} />
         <View style={styles.postAuthorInfo}>
-          <Text style={styles.postAuthor}>{post.author}</Text>
-          <Text style={styles.postHandle}>{post.handle} · {post.time}</Text>
+          <Text style={styles.postAuthor}>{author.name || 'User'}</Text>
+          <Text style={styles.postHandle}>@{author.username || 'user'} · {post.time_ago || 'now'}</Text>
         </View>
         <TouchableOpacity style={styles.postMoreBtn}>
           <Ionicons name="ellipsis-horizontal" size={18} color={COLORS.textTertiary} />
@@ -141,57 +45,59 @@ function PostCard({ post, onLike, onSave }) {
 
       <Text style={styles.postContent}>{post.content}</Text>
 
-      {post.type === 'scan' && post.score !== undefined && (
+      {post.post_type === 'scan' && post.product_score !== undefined && (
         <View style={[styles.scanResult, { borderLeftColor: scoreColor }]}>
           <View style={[styles.scanScoreBox, { backgroundColor: scoreColor + '18' }]}>
-            <Text style={[styles.scanScoreNum, { color: scoreColor }]}>{post.score}</Text>
+            <Text style={[styles.scanScoreNum, { color: scoreColor }]}>{post.product_score}</Text>
           </View>
           <View style={styles.scanInfo}>
-            <Text style={styles.scanProductName}>{post.productName}</Text>
-            <ScoreBadge score={post.score} size="sm" />
+            <Text style={styles.scanProductName}>{post.product_name || 'Product'}</Text>
+            <ScoreBadge score={post.product_score} size="sm" />
           </View>
         </View>
       )}
 
-      {post.type === 'milestone' && (
+      {post.post_type === 'milestone' && post.health_score && (
         <View style={styles.milestoneBanner}>
           <Ionicons name="trophy-outline" size={18} color={COLORS.warning} />
-          <Text style={styles.milestoneText}>Health Score: {post.score}</Text>
+          <Text style={styles.milestoneText}>Health Score: {post.health_score}</Text>
         </View>
       )}
 
-      <View style={styles.tagRow}>
-        {post.tags?.map(tag => (
-          <TouchableOpacity key={tag} style={styles.tag}>
-            <Text style={styles.tagText}>#{tag}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {post.hashtags && post.hashtags.length > 0 && (
+        <View style={styles.tagRow}>
+          {post.hashtags.map(tag => (
+            <TouchableOpacity key={tag} style={styles.tag}>
+              <Text style={styles.tagText}>#{tag}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       <View style={styles.postActions}>
         <TouchableOpacity style={styles.actionBtn} onPress={() => onLike(post.id)}>
           <Ionicons
-            name={post.liked ? 'heart' : 'heart-outline'}
+            name={post.is_liked ? 'heart' : 'heart-outline'}
             size={20}
-            color={post.liked ? COLORS.error : COLORS.textSecondary}
+            color={post.is_liked ? COLORS.error : COLORS.textSecondary}
           />
-          <Text style={[styles.actionCount, post.liked && { color: COLORS.error }]}>
-            {post.likes + (post.liked ? 1 : 0)}
+          <Text style={[styles.actionCount, post.is_liked && { color: COLORS.error }]}>
+            {post.likes_count || 0}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn}>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => onComment(post.id)}>
           <Ionicons name="chatbubble-outline" size={20} color={COLORS.textSecondary} />
-          <Text style={styles.actionCount}>{post.comments}</Text>
+          <Text style={styles.actionCount}>{post.comments_count || 0}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtn}>
           <Ionicons name="arrow-redo-outline" size={20} color={COLORS.textSecondary} />
-          <Text style={styles.actionCount}>{post.shares}</Text>
+          <Text style={styles.actionCount}>{post.shares_count || 0}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtn} onPress={() => onSave(post.id)}>
           <Ionicons
-            name={post.saved ? 'bookmark' : 'bookmark-outline'}
+            name={post.is_saved ? 'bookmark' : 'bookmark-outline'}
             size={20}
-            color={post.saved ? COLORS.primary : COLORS.textSecondary}
+            color={post.is_saved ? COLORS.primary : COLORS.textSecondary}
           />
         </TouchableOpacity>
       </View>
@@ -202,39 +108,70 @@ function PostCard({ post, onLike, onSave }) {
 export default function SocialFeed({ navigation }) {
   const { user } = useAppContext();
   const [activeTab, setActiveTab] = useState('Discover');
-  const [posts, setPosts] = useState(MOCK_POSTS);
-  const [loading, setLoading] = useState(false);
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // TODO: Replace with real API call when community backend is ready
-  // const loadPosts = async () => {
-  //   const data = await api.get(`/api/community/posts?tab=${activeTab}`);
-  //   setPosts(data.posts);
-  // };
+  useEffect(() => {
+    loadPosts();
+  }, [activeTab]);
 
-  const handleLike = useCallback((postId) => {
-    setPosts(prev => prev.map(p => p.id === postId ? { ...p, liked: !p.liked } : p));
-  }, []);
+  const loadPosts = async () => {
+    try {
+      setLoading(true);
+      const filter = activeTab === 'Following' ? 'following' : 'all';
+      const response = await socialService.getFeed(filter, 20, 0);
+      setPosts(response.posts || []);
+    } catch (error) {
+      console.error('Failed to load posts:', error);
+      Alert.alert('Error', 'Failed to load community posts');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLike = useCallback(async (postId) => {
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+
+    // Optimistic update
+    setPosts(prev => prev.map(p => 
+      p.id === postId 
+        ? { ...p, is_liked: !p.is_liked, likes_count: p.is_liked ? p.likes_count - 1 : p.likes_count + 1 }
+        : p
+    ));
+
+    try {
+      if (post.is_liked) {
+        await socialService.unlikePost(postId);
+      } else {
+        await socialService.likePost(postId);
+      }
+    } catch (error) {
+      // Revert on error
+      setPosts(prev => prev.map(p => 
+        p.id === postId 
+          ? { ...p, is_liked: post.is_liked, likes_count: post.likes_count }
+          : p
+      ));
+      console.error('Failed to like post:', error);
+    }
+  }, [posts]);
 
   const handleSave = useCallback((postId) => {
-    setPosts(prev => prev.map(p => p.id === postId ? { ...p, saved: !p.saved } : p));
+    setPosts(prev => prev.map(p => p.id === postId ? { ...p, is_saved: !p.is_saved } : p));
+  }, []);
+
+  const handleComment = useCallback((postId) => {
+    // Navigate to post detail with comments
+    console.log('Open comments for post:', postId);
   }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    // TODO: await loadPosts();
-    await new Promise(r => setTimeout(r, 600)); // remove when real API connected
+    await loadPosts();
     setRefreshing(false);
   }, [activeTab]);
-
-  const userInitials = user?.user_metadata?.name
-    ? user.user_metadata.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
-    : user?.email?.[0]?.toUpperCase() || 'ME';
-
-  const stories = [
-    { ...MOCK_STORIES[0], initials: userInitials },
-    ...MOCK_STORIES.slice(1),
-  ];
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -264,29 +201,44 @@ export default function SocialFeed({ navigation }) {
         ))}
       </View>
 
-      <ScrollView
-        style={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
-        }
-      >
-        {/* Stories */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      ) : (
         <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.storiesRow}
+          style={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
+          }
         >
-          {stories.map(s => <StoryCircle key={s.id} story={s} />)}
+          {posts.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="people-outline" size={64} color={COLORS.textTertiary} />
+              <Text style={styles.emptyTitle}>No posts yet</Text>
+              <Text style={styles.emptyText}>
+                {activeTab === 'Following' 
+                  ? 'Follow users to see their posts here'
+                  : 'Be the first to share with the community'
+                }
+              </Text>
+            </View>
+          ) : (
+            posts.map(post => (
+              <PostCard 
+                key={post.id} 
+                post={post} 
+                onLike={handleLike} 
+                onSave={handleSave}
+                onComment={handleComment}
+              />
+            ))
+          )}
+
+          <View style={{ height: SPACING.xxxl }} />
         </ScrollView>
-
-        {/* Posts */}
-        {posts.map(post => (
-          <PostCard key={post.id} post={post} onLike={handleLike} onSave={handleSave} />
-        ))}
-
-        <View style={{ height: SPACING.xxxl }} />
-      </ScrollView>
+      )}
 
       <TouchableOpacity style={styles.fab}>
         <Ionicons name="add" size={26} color={COLORS.white} />
@@ -330,31 +282,29 @@ const styles = StyleSheet.create({
   tabTextActive: { color: COLORS.primary },
 
   scroll: { flex: 1 },
-
-  storiesRow: {
-    paddingHorizontal: SPACING.base,
-    paddingVertical: SPACING.md,
-    gap: SPACING.base,
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.xxxl,
   },
-  storyItem: { alignItems: 'center', width: 64 },
-  storyRing: {
-    width: 60, height: 60, borderRadius: 30,
-    borderWidth: 2, borderColor: COLORS.border,
-    padding: 2, marginBottom: 4,
-    alignItems: 'center', justifyContent: 'center',
-    position: 'relative',
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.xxxl,
+    paddingHorizontal: SPACING.xl,
   },
-  storyRingActive: { borderColor: COLORS.primary },
-  storyAddBtn: {
-    position: 'absolute', bottom: -2, right: -2,
-    width: 18, height: 18, borderRadius: 9,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: COLORS.background,
+  emptyTitle: {
+    fontSize: TYPOGRAPHY.xl,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginTop: SPACING.base,
+    marginBottom: SPACING.xs,
   },
-  storyName: {
-    fontSize: TYPOGRAPHY.xs, color: COLORS.textSecondary,
-    fontWeight: '500', textAlign: 'center',
+  emptyText: {
+    fontSize: TYPOGRAPHY.base,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
   },
 
   avatar: { alignItems: 'center', justifyContent: 'center' },

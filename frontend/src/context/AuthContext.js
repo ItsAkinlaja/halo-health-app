@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { supabase } from '../services/supabase';
 import storage, { STORAGE_KEYS } from '../utils/storage';
 
@@ -87,8 +88,48 @@ export function AuthProvider({ children }) {
   };
 
   const signIn = async (email, password) => {
+    console.log('signIn called for:', email);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    if (error) {
+      console.error('signIn error:', error);
+      throw error;
+    }
+    
+    console.log('signIn successful, user:', data?.user?.email);
+    
+    if (data?.user) {
+      console.log('Updating auth state manually...');
+      setUser(data.user);
+      await storage.setItem(STORAGE_KEYS.USER_SESSION, data.session);
+      
+      const onboardingCompleted = await storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
+      const disclaimerAccepted = await storage.getItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED);
+      
+      console.log('Onboarding status:', { onboardingCompleted, disclaimerAccepted });
+      
+      const isReturningUser = onboardingCompleted === null && disclaimerAccepted === null;
+      
+      if (isReturningUser) {
+        await storage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, true);
+        await storage.setItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED, true);
+        setIsFirstTime(false);
+        setNeedsDisclaimer(false);
+        console.log('Returning user detected - skipping onboarding');
+      } else {
+        setIsFirstTime(!onboardingCompleted);
+        setNeedsDisclaimer(onboardingCompleted && !disclaimerAccepted);
+      }
+      
+      console.log('Auth state updated:', {
+        hasUser: true,
+        isFirstTime: isReturningUser ? false : !onboardingCompleted,
+        needsDisclaimer: isReturningUser ? false : (onboardingCompleted && !disclaimerAccepted)
+      });
+      
+      // Force navigation by setting loading to false
+      setIsLoading(false);
+    }
+    
     return data;
   };
 
@@ -99,6 +140,7 @@ export function AuthProvider({ children }) {
       options: {
         data: userData,
         emailRedirectTo: 'halohealth://auth/callback',
+        channel: 'email',
       },
     });
     if (error) throw error;
@@ -106,7 +148,11 @@ export function AuthProvider({ children }) {
   };
 
   const verifyOtp = async (email, token) => {
-    const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
+    const { data, error } = await supabase.auth.verifyOtp({ 
+      email, 
+      token, 
+      type: 'signup' 
+    });
     if (error) throw error;
     return data;
   };
@@ -153,6 +199,71 @@ export function AuthProvider({ children }) {
     setNeedsDisclaimer(true);
   };
 
+  const checkBiometricSupport = async () => {
+    const compatible = await LocalAuthentication.hasHardwareAsync();
+    const enrolled = await LocalAuthentication.isEnrolledAsync();
+    const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
+    return { compatible, enrolled, types };
+  };
+
+  const authenticateWithBiometrics = async () => {
+    const result = await LocalAuthentication.authenticateAsync({
+      promptMessage: 'Authenticate to sign in',
+      fallbackLabel: 'Use passcode',
+      disableDeviceFallback: false,
+    });
+    return result.success;
+  };
+
+  const enableBiometricLogin = async (email, password) => {
+    await storage.setItem(STORAGE_KEYS.BIOMETRIC_ENABLED, true);
+    await storage.setItem(STORAGE_KEYS.BIOMETRIC_EMAIL, email);
+    await storage.setItem(STORAGE_KEYS.BIOMETRIC_PASSWORD, password);
+  };
+
+  const disableBiometricLogin = async () => {
+    await storage.removeItem(STORAGE_KEYS.BIOMETRIC_ENABLED);
+    await storage.removeItem(STORAGE_KEYS.BIOMETRIC_EMAIL);
+    await storage.removeItem(STORAGE_KEYS.BIOMETRIC_PASSWORD);
+  };
+
+  const getBiometricCredentials = async () => {
+    const enabled = await storage.getItem(STORAGE_KEYS.BIOMETRIC_ENABLED);
+    if (!enabled) return null;
+    const email = await storage.getItem(STORAGE_KEYS.BIOMETRIC_EMAIL);
+    const password = await storage.getItem(STORAGE_KEYS.BIOMETRIC_PASSWORD);
+    return { email, password };
+  };
+
+  const deleteAccount = async () => {
+    if (!user) throw new Error('No user logged in');
+    
+    // Call backend API to delete account
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/delete-account`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete account');
+      }
+      
+      // Sign out and clear local data
+      await signOut();
+    } catch (error) {
+      console.error('Delete account error:', error);
+      // Still sign out even if backend fails
+      await signOut();
+      throw error;
+    }
+  };
+
   const value = {
     user,
     isLoading,
@@ -166,6 +277,12 @@ export function AuthProvider({ children }) {
     sendPasswordResetOtp,
     resetPasswordWithOtp,
     completeOnboarding,
+    checkBiometricSupport,
+    authenticateWithBiometrics,
+    enableBiometricLogin,
+    disableBiometricLogin,
+    getBiometricCredentials,
+    deleteAccount,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

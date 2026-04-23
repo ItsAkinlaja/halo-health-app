@@ -7,6 +7,9 @@ export const STORAGE_KEYS = {
   MEDICAL_DISCLAIMER_ACCEPTED: 'medicalDisclaimerAccepted',
   ACTIVE_PROFILE: 'activeProfile',
   APP_SETTINGS: 'appSettings',
+  BIOMETRIC_ENABLED: 'biometricEnabled',
+  BIOMETRIC_EMAIL: 'biometricEmail',
+  BIOMETRIC_PASSWORD: 'biometricPassword',
 };
 
 // Get item from storage
@@ -61,6 +64,9 @@ export const clearAuthData = async () => {
       STORAGE_KEYS.ONBOARDING_COMPLETED,
       STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED,
       STORAGE_KEYS.ACTIVE_PROFILE,
+      STORAGE_KEYS.BIOMETRIC_ENABLED,
+      STORAGE_KEYS.BIOMETRIC_EMAIL,
+      STORAGE_KEYS.BIOMETRIC_PASSWORD,
     ]);
     return true;
   } catch (error) {

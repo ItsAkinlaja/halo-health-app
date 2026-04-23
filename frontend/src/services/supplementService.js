@@ -1,4 +1,4 @@
-import api from './api';
+import { api } from './api';
 
 class SupplementService {
   async searchSupplements(category = 'all', query = '') {

@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import HaloMascot from '../../components/common/HaloMascot';
 import { useAppContext } from '../../context/AppContext';
 import { coachService } from '../../services/coachService';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../styles/theme';
@@ -97,8 +98,8 @@ export default function AICoach({ navigation }) {
     return (
       <View style={[styles.messageRow, isUser && styles.messageRowUser]}>
         {!isUser && (
-          <View style={styles.avatarBot}>
-            <Ionicons name="sparkles" size={16} color={COLORS.white} />
+          <View style={styles.mascotContainer}>
+            <HaloMascot mood="happy" size={32} animated={false} />
           </View>
         )}
         <View style={[styles.messageBubble, isUser ? styles.messageBubbleUser : styles.messageBubbleBot]}>
@@ -122,8 +123,8 @@ export default function AICoach({ navigation }) {
           <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <View style={styles.headerIcon}>
-            <Ionicons name="sparkles" size={18} color={COLORS.primary} />
+          <View style={styles.headerMascot}>
+            <HaloMascot mood="happy" size={36} animated={true} />
           </View>
           <View>
             <Text style={styles.headerTitle}>Halo Coach</Text>
@@ -217,32 +218,27 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  headerIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.primaryLight,
+  headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  headerMascot: {
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: SPACING.sm,
   },
   headerTitle: { fontSize: TYPOGRAPHY.base, fontWeight: '700', color: COLORS.textPrimary },
   headerSubtitle: { fontSize: TYPOGRAPHY.xs, color: COLORS.textSecondary },
   menuBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   container: { flex: 1 },
   messagesList: { padding: SPACING.base },
-  messageRow: { flexDirection: 'row', maxWidth: '85%', marginBottom: SPACING.md },
+  messageRow: { flexDirection: 'row', maxWidth: '85%', marginBottom: SPACING.md, alignItems: 'flex-end' },
   messageRowUser: { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
-  avatarBot: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: COLORS.primary,
+  mascotContainer: {
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
     marginRight: SPACING.sm,
+    marginBottom: 4,
   },
   avatarUser: {
     width: 32,

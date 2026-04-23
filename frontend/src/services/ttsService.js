@@ -1,4 +1,4 @@
-import api from './api';
+import { api } from './api';
 import { Audio } from 'expo-av';
 
 export const ttsService = {
