@@ -18,7 +18,7 @@ export default function Login({ navigation, route }) {
   const [error, setError] = useState(null);
   const [focusedField, setFocusedField] = useState(null);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
-  const { signIn, checkBiometricSupport, authenticateWithBiometrics, getBiometricCredentials, enableBiometricLogin } = useAuth();
+  const { signIn, checkBiometricSupport, authenticateWithBiometrics, getBiometricCredentials } = useAuth();
 
   useEffect(() => {
     checkBiometric();
@@ -55,11 +55,8 @@ export default function Login({ navigation, route }) {
     setError(null);
     setIsLoading(true);
     try {
-      console.log('Attempting login...');
-      const result = await signIn(email.trim(), password);
-      console.log('Login successful:', result?.user?.email);
+      await signIn(email.trim(), password);
     } catch (err) {
-      console.error('Login error:', err);
       const msg = err?.message?.toLowerCase() || '';
       if (msg.includes('invalid') || err?.status === 400 || err?.status === 401) {
         setError('Incorrect email or password');
@@ -97,14 +94,12 @@ export default function Login({ navigation, route }) {
                   resizeMode="contain"
                 />
               </View>
-              <Text style={styles.tagline}>Professional Product Safety Analysis</Text>
+              <Text style={styles.welcomeText}>Welcome back</Text>
+              <Text style={styles.tagline}>Sign in to continue</Text>
             </View>
 
             {/* Form Card */}
             <Card style={styles.formCard} variant="elevated">
-              <Text style={styles.formTitle}>Sign In</Text>
-              <Text style={styles.formSubtitle}>Access your health profile</Text>
-
               {error && (
                 <View style={styles.errorBanner}>
                   <Ionicons name="alert-circle-outline" size={18} color={COLORS.error} />
@@ -129,7 +124,7 @@ export default function Login({ navigation, route }) {
                 ]}>
                   <Ionicons
                     name="mail-outline"
-                    size={18}
+                    size={20}
                     color={focusedField === 'email' ? COLORS.primary : COLORS.textTertiary}
                     style={styles.inputIcon}
                   />
@@ -150,7 +145,14 @@ export default function Login({ navigation, route }) {
 
               {/* Password Input */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Password</Text>
+                <View style={styles.labelRow}>
+                  <Text style={styles.label}>Password</Text>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('ForgotPassword')}
+                  >
+                    <Text style={styles.forgotText}>Forgot?</Text>
+                  </TouchableOpacity>
+                </View>
                 <View style={[
                   styles.inputWrap,
                   focusedField === 'password' && styles.inputWrapFocused,
@@ -158,7 +160,7 @@ export default function Login({ navigation, route }) {
                 ]}>
                   <Ionicons
                     name="lock-closed-outline"
-                    size={18}
+                    size={20}
                     color={focusedField === 'password' ? COLORS.primary : COLORS.textTertiary}
                     style={styles.inputIcon}
                   />
@@ -179,19 +181,12 @@ export default function Login({ navigation, route }) {
                   >
                     <Ionicons
                       name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                      size={18}
+                      size={20}
                       color={COLORS.textTertiary}
                     />
                   </TouchableOpacity>
                 </View>
               </View>
-
-              <TouchableOpacity
-                style={styles.forgotBtn}
-                onPress={() => navigation.navigate('ForgotPassword')}
-              >
-                <Text style={styles.forgotText}>Forgot password?</Text>
-              </TouchableOpacity>
 
               <Button
                 title="Sign In"
@@ -199,8 +194,7 @@ export default function Login({ navigation, route }) {
                 loading={isLoading}
                 disabled={isLoading}
                 fullWidth
-                icon="arrow-forward"
-                iconPosition="right"
+                style={{ marginTop: SPACING.md }}
               />
 
               {biometricAvailable && (
@@ -210,7 +204,7 @@ export default function Login({ navigation, route }) {
                   disabled={isLoading}
                 >
                   <Ionicons name="finger-print" size={24} color={COLORS.primary} />
-                  <Text style={styles.biometricText}>Sign in with biometrics</Text>
+                  <Text style={styles.biometricText}>Use biometrics</Text>
                 </TouchableOpacity>
               )}
 
@@ -222,10 +216,10 @@ export default function Login({ navigation, route }) {
 
               <View style={styles.socialRow}>
                 <TouchableOpacity style={styles.socialBtn} activeOpacity={0.7}>
-                  <Ionicons name="logo-google" size={20} color={COLORS.textPrimary} />
+                  <Ionicons name="logo-google" size={22} color={COLORS.textPrimary} />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.socialBtn} activeOpacity={0.7}>
-                  <Ionicons name="logo-apple" size={20} color={COLORS.textPrimary} />
+                  <Ionicons name="logo-apple" size={22} color={COLORS.textPrimary} />
                 </TouchableOpacity>
               </View>
             </Card>
@@ -234,7 +228,7 @@ export default function Login({ navigation, route }) {
             <View style={styles.footer}>
               <Text style={styles.footerText}>Don't have an account?</Text>
               <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                <Text style={styles.footerLink}> Create Account</Text>
+                <Text style={styles.footerLink}> Sign Up</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -247,11 +241,11 @@ export default function Login({ navigation, route }) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.background,
   },
   scroll: {
     flexGrow: 1,
-    paddingHorizontal: SPACING.xl,
+    paddingHorizontal: SPACING.lg,
     paddingBottom: SPACING.xl,
   },
 
@@ -259,37 +253,33 @@ const styles = StyleSheet.create({
   logoSection: {
     alignItems: 'center',
     paddingTop: SPACING.xxxl,
-    paddingBottom: SPACING.xxl,
+    paddingBottom: SPACING.xl,
   },
   logoImageContainer: {
-    width: 300,
-    height: 200,
-    marginBottom: SPACING.base,
+    width: 80,
+    height: 80,
+    marginBottom: SPACING.lg,
+    backgroundColor: 'transparent',
   },
   logoImage: {
     width: '100%',
     height: '100%',
+    backgroundColor: 'transparent',
+  },
+  welcomeText: {
+    fontSize: TYPOGRAPHY.xxxl,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.xs,
   },
   tagline: {
-    fontSize: TYPOGRAPHY.sm,
+    fontSize: TYPOGRAPHY.base,
     color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
   },
 
   // Form Card
   formCard: {
     padding: SPACING.xl,
-  },
-  formTitle: {
-    fontSize: TYPOGRAPHY.xxl,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    letterSpacing: -0.5,
-  },
-  formSubtitle: {
-    fontSize: TYPOGRAPHY.base,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
     marginBottom: SPACING.lg,
   },
 
@@ -301,7 +291,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.error + '10',
     borderRadius: RADIUS.md,
     padding: SPACING.md,
-    marginBottom: SPACING.base,
+    marginBottom: SPACING.lg,
     borderWidth: 1,
     borderColor: COLORS.error + '20',
   },
@@ -318,7 +308,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.success + '10',
     borderRadius: RADIUS.md,
     padding: SPACING.md,
-    marginBottom: SPACING.base,
+    marginBottom: SPACING.lg,
     borderWidth: 1,
     borderColor: COLORS.success + '20',
   },
@@ -331,22 +321,33 @@ const styles = StyleSheet.create({
 
   // Input Fields
   inputGroup: {
-    marginBottom: SPACING.base,
+    marginBottom: SPACING.lg,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
   },
   label: {
     fontSize: TYPOGRAPHY.sm,
     fontWeight: '600',
     color: COLORS.textPrimary,
-    marginBottom: SPACING.sm,
+  },
+  forgotText: {
+    fontSize: TYPOGRAPHY.sm,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
     paddingHorizontal: SPACING.md,
+    height: 56,
   },
   inputWrapFocused: {
     borderColor: COLORS.primary,
@@ -362,18 +363,22 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: TYPOGRAPHY.base,
     color: COLORS.textPrimary,
-    paddingVertical: SPACING.md,
   },
   eyeBtn: {
     padding: SPACING.sm,
   },
 
-  forgotBtn: {
-    alignSelf: 'flex-end',
-    marginBottom: SPACING.lg,
+  // Biometric Button
+  biometricBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    paddingVertical: SPACING.md,
+    marginTop: SPACING.md,
   },
-  forgotText: {
-    fontSize: TYPOGRAPHY.sm,
+  biometricText: {
+    fontSize: TYPOGRAPHY.base,
     color: COLORS.primary,
     fontWeight: '600',
   },
@@ -383,7 +388,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.md,
-    marginVertical: SPACING.lg,
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.md,
   },
   dividerLine: {
     flex: 1,
@@ -391,7 +397,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.border,
   },
   dividerText: {
-    fontSize: TYPOGRAPHY.sm,
+    fontSize: TYPOGRAPHY.xs,
     color: COLORS.textTertiary,
   },
 
@@ -405,10 +411,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: SPACING.md,
-    backgroundColor: COLORS.background,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
+    height: 56,
   },
 
   // Footer
@@ -416,7 +423,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: SPACING.xl,
+    marginTop: SPACING.md,
   },
   footerText: {
     fontSize: TYPOGRAPHY.base,
@@ -425,6 +432,6 @@ const styles = StyleSheet.create({
   footerLink: {
     fontSize: TYPOGRAPHY.base,
     color: COLORS.primary,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

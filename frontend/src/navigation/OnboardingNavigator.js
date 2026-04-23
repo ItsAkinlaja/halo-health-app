@@ -12,7 +12,7 @@ import OnboardingStep7 from '../screens/onboarding/OnboardingStep7';
 import OnboardingStep8 from '../screens/onboarding/OnboardingStep8';
 import { useAuth } from '../context/AuthContext';
 import { OnboardingProvider, useOnboarding } from '../context/OnboardingContext';
-import { AppContext } from '../context/AppContext';
+
 import { profileService } from '../services/profileService';
 
 const Stack = createNativeStackNavigator();
@@ -102,9 +102,8 @@ const OnboardingStep7Wrapper = ({ navigation }) => {
 };
 
 const OnboardingStep8Wrapper = ({ navigation }) => {
-  const { completeOnboarding } = useAuth();
+  const { completeOnboarding, user } = useAuth();
   const { data } = useOnboarding();
-  const { user } = useContext(AppContext);
 
   const handleComplete = async () => {
     console.log('OnboardingStep8Wrapper: handleComplete called');
@@ -113,7 +112,6 @@ const OnboardingStep8Wrapper = ({ navigation }) => {
     try {
       if (user?.id) {
         console.log('Checking for existing profiles...');
-        // Check if profiles already exist
         const existingProfiles = await profileService.getProfiles(user.id);
         console.log('Existing profiles count:', existingProfiles?.length || 0);
         
@@ -121,10 +119,14 @@ const OnboardingStep8Wrapper = ({ navigation }) => {
           console.log('Profiles already exist, skipping creation');
         } else {
           console.log('Creating primary profile...');
-          // Create the primary health profile with all collected data
+          const fullName = user.user_metadata?.full_name || 
+            (user.user_metadata?.first_name && user.user_metadata?.last_name 
+              ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
+              : user.user_metadata?.name || 'My Profile');
+          
           await profileService.createProfile({
             user_id: user.id,
-            name: user.user_metadata?.name || user.user_metadata?.full_name || 'My Profile',
+            name: fullName,
             is_primary: true,
             health_goals: data.goals || [],
             dietary_restrictions: data.dietaryPreferences || [],
@@ -134,7 +136,6 @@ const OnboardingStep8Wrapper = ({ navigation }) => {
           });
           console.log('Primary profile created');
 
-          // Create family member profiles (if any)
           if (data.familyMembers && data.familyMembers.length > 0) {
             console.log('Creating family member profiles:', data.familyMembers.length);
             for (const member of data.familyMembers) {
@@ -152,7 +153,6 @@ const OnboardingStep8Wrapper = ({ navigation }) => {
       }
     } catch (error) {
       console.warn('Failed to save onboarding profile:', error.message);
-      // Don't block completion — user can update profile later
     }
 
     console.log('Calling completeOnboarding...');

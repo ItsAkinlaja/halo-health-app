@@ -1,0 +1,41 @@
+{
+  "welcome": {
+    "title": "Welcome to Halo Health",
+    "subtitle": "Your personal health companion for a better lifestyle",
+    "continue": "Continue",
+    "alreadyHaveAccount": "Already have an account?",
+    "signIn": "Sign in"
+  },
+  "language": {
+    "title": "Choose Your Language",
+    "subtitle": "Select your preferred language",
+    "done": "Done"
+  },
+  "auth": {
+    "login": "Sign In",
+    "register": "Sign Up",
+    "email": "Email Address",
+    "password": "Password",
+    "forgotPassword": "Forgot?",
+    "dontHaveAccount": "Don't have an account?",
+    "welcomeBack": "Welcome back",
+    "signInToContinue": "Sign in to continue"
+  }
+}
+,
+  "onboardingPreview": {
+    "title": "Let's Get You Started",
+    "subtitle": "After creating your account, we'll help you personalize your experience",
+    "createAccount": "Create Account",
+    "step1Title": "Set Your Goals",
+    "step1Description": "Define your health and wellness objectives",
+    "step2Title": "Dietary Preferences",
+    "step2Description": "Tell us about your food choices and restrictions",
+    "step3Title": "Personalize Experience",
+    "step3Description": "Choose your AI voice and notification preferences",
+    "step4Title": "Health Profile",
+    "step4Description": "Add allergies and health conditions for safety",
+    "step5Title": "Family Profiles",
+    "step5Description": "Manage health for your loved ones"
+  }
+}

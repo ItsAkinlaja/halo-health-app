@@ -12,6 +12,7 @@ export default function VerifyEmail({ route, navigation }) {
   const { verifyOtp, resendOtp } = useAuth();
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [resending, setResending] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
@@ -55,7 +56,8 @@ export default function VerifyEmail({ route, navigation }) {
 
     try {
       await verifyOtp(email, otpCode);
-      navigation.replace('Auth', { screen: 'Login' });
+      setSuccess(true);
+      // Wait for success message to show, then navigation will happen automatically
     } catch (err) {
       setError(err.message || 'Invalid verification code');
     } finally {
@@ -113,7 +115,12 @@ export default function VerifyEmail({ route, navigation }) {
             ))}
           </View>
 
-          {error ? (
+          {success ? (
+            <View style={styles.successContainer}>
+              <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+              <Text style={styles.successText}>Email verified successfully!</Text>
+            </View>
+          ) : error ? (
             <View style={styles.errorContainer}>
               <Ionicons name="alert-circle" size={16} color={COLORS.error} />
               <Text style={styles.errorText}>{error}</Text>
@@ -121,9 +128,9 @@ export default function VerifyEmail({ route, navigation }) {
           ) : null}
 
           <Button
-            title={loading ? 'Verifying...' : 'Verify Email'}
+            title={success ? 'Verified!' : loading ? 'Verifying...' : 'Verify Email'}
             onPress={handleVerify}
-            disabled={loading || otp.join('').length !== 6}
+            disabled={loading || success || otp.join('').length !== 6}
             style={styles.verifyBtn}
           />
 
@@ -204,6 +211,21 @@ const styles = StyleSheet.create({
   otpInputFilled: {
     borderColor: COLORS.primary,
     backgroundColor: COLORS.primaryLight,
+  },
+  successContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    backgroundColor: COLORS.success + '10',
+    padding: SPACING.sm,
+    borderRadius: RADIUS.sm,
+    marginBottom: SPACING.base,
+  },
+  successText: {
+    flex: 1,
+    fontSize: TYPOGRAPHY.sm,
+    color: COLORS.success,
+    fontWeight: '600',
   },
   errorContainer: {
     flexDirection: 'row',

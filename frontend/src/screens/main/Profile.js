@@ -27,7 +27,10 @@ export default function Profile({ navigation }) {
     }
   };
 
-  const displayName = activeProfile?.name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'User';
+  const displayName = activeProfile?.name || 
+    (user?.user_metadata?.first_name && user?.user_metadata?.last_name 
+      ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
+      : user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'User');
   const displayEmail = user?.email || 'user@halohealth.com';
   const memberSince = 'January 2024';
 

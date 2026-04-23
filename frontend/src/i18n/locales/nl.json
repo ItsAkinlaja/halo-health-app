@@ -1,0 +1,41 @@
+{
+  "welcome": {
+    "title": "Welkom bij Halo Health",
+    "subtitle": "Uw persoonlijke gezondheidspartner voor een betere levensstijl",
+    "continue": "Doorgaan",
+    "alreadyHaveAccount": "Heeft u al een account?",
+    "signIn": "Inloggen"
+  },
+  "language": {
+    "title": "Kies uw taal",
+    "subtitle": "Selecteer uw voorkeurstaal",
+    "done": "Klaar"
+  },
+  "auth": {
+    "login": "Inloggen",
+    "register": "Registreren",
+    "email": "E-mailadres",
+    "password": "Wachtwoord",
+    "forgotPassword": "Vergeten?",
+    "dontHaveAccount": "Heeft u geen account?",
+    "welcomeBack": "Welkom terug",
+    "signInToContinue": "Log in om door te gaan"
+  }
+}
+,
+  "onboardingPreview": {
+    "title": "Laten we beginnen",
+    "subtitle": "Na het aanmaken van uw account helpen we u uw ervaring te personaliseren",
+    "createAccount": "Account aanmaken",
+    "step1Title": "Stel uw doelen in",
+    "step1Description": "Definieer uw gezondheids- en welzijnsdoelen",
+    "step2Title": "Dieetvoorkeuren",
+    "step2Description": "Vertel ons over uw voedselkeuzes en beperkingen",
+    "step3Title": "Personaliseer ervaring",
+    "step3Description": "Kies uw AI-stem en meldingsvoorkeuren",
+    "step4Title": "Gezondheidsprofiel",
+    "step4Description": "Voeg allergieën en gezondheidsproblemen toe voor uw veiligheid",
+    "step5Title": "Familieprofielen",
+    "step5Description": "Beheer de gezondheid van uw dierbaren"
+  }
+}

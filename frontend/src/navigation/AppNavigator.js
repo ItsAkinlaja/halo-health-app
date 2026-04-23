@@ -12,6 +12,7 @@ const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
   const { user, isLoading, isFirstTime, needsDisclaimer } = useAuth();
+  const [navigationKey, setNavigationKey] = React.useState(0);
 
   useEffect(() => {
     console.log('AppNavigator state:', { 
@@ -21,6 +22,11 @@ export default function AppNavigator() {
       needsDisclaimer,
       userEmail: user?.email 
     });
+    
+    // Force remount when auth state changes
+    if (!isLoading) {
+      setNavigationKey(prev => prev + 1);
+    }
   }, [user, isLoading, isFirstTime, needsDisclaimer]);
 
   if (isLoading) {
@@ -43,7 +49,7 @@ export default function AppNavigator() {
 
   return (
     <Stack.Navigator 
-      key={`nav-${initialRouteName}-${user?.id || 'no-user'}`}
+      key={`nav-${navigationKey}-${initialRouteName}-${user?.id || 'no-user'}`}
       initialRouteName={initialRouteName}
       screenOptions={{ headerShown: false }}
     >

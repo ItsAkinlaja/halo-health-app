@@ -68,7 +68,9 @@ export default function ResetPasswordOtp({ route, navigation }) {
     try {
       const otpCode = otp.join('');
       await resetPasswordWithOtp(email, otpCode, newPassword);
-      navigation.replace('Auth', { screen: 'Login' });
+      navigation.replace('Login', { 
+        successMessage: 'Password reset successfully! Please sign in.' 
+      });
     } catch (err) {
       setError(err.message || 'Failed to reset password');
     } finally {

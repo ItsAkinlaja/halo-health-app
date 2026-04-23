@@ -35,7 +35,6 @@ export function AuthProvider({ children }) {
           isProcessing.current = false;
         } else if (event === 'SIGNED_IN' && session?.user) {
           isProcessing.current = true;
-          setUser(session.user);
           await storage.setItem(STORAGE_KEYS.USER_SESSION, session);
           
           const onboardingCompleted = await storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
@@ -43,6 +42,9 @@ export function AuthProvider({ children }) {
           
           setIsFirstTime(!onboardingCompleted);
           setNeedsDisclaimer(onboardingCompleted && !disclaimerAccepted);
+          setUser(session.user);
+          
+          await new Promise(resolve => setTimeout(resolve, 100));
           setIsLoading(false);
           isProcessing.current = false;
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
@@ -99,35 +101,30 @@ export function AuthProvider({ children }) {
     
     if (data?.user) {
       console.log('Updating auth state manually...');
-      setUser(data.user);
-      await storage.setItem(STORAGE_KEYS.USER_SESSION, data.session);
       
       const onboardingCompleted = await storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
       const disclaimerAccepted = await storage.getItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED);
       
       console.log('Onboarding status:', { onboardingCompleted, disclaimerAccepted });
       
-      const isReturningUser = onboardingCompleted === null && disclaimerAccepted === null;
+      // Update all states in correct order
+      setIsLoading(true); // Set loading first
+      await storage.setItem(STORAGE_KEYS.USER_SESSION, data.session);
       
-      if (isReturningUser) {
-        await storage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, true);
-        await storage.setItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED, true);
-        setIsFirstTime(false);
-        setNeedsDisclaimer(false);
-        console.log('Returning user detected - skipping onboarding');
-      } else {
-        setIsFirstTime(!onboardingCompleted);
-        setNeedsDisclaimer(onboardingCompleted && !disclaimerAccepted);
-      }
+      // Set states
+      setIsFirstTime(onboardingCompleted !== true);
+      setNeedsDisclaimer(onboardingCompleted === true && disclaimerAccepted !== true);
+      setUser(data.user); // Set user last to trigger navigation
       
       console.log('Auth state updated:', {
         hasUser: true,
-        isFirstTime: isReturningUser ? false : !onboardingCompleted,
-        needsDisclaimer: isReturningUser ? false : (onboardingCompleted && !disclaimerAccepted)
+        isFirstTime: onboardingCompleted !== true,
+        needsDisclaimer: onboardingCompleted === true && disclaimerAccepted !== true
       });
       
-      // Force navigation by setting loading to false
-      setIsLoading(false);
+      // Small delay to ensure state updates propagate
+      await new Promise(resolve => setTimeout(resolve, 100));
+      setIsLoading(false); // Trigger navigation
     }
     
     return data;
@@ -164,18 +161,21 @@ export function AuthProvider({ children }) {
 
   const signOut = async () => {
     try {
+      setIsLoading(true);
       await storage.clearAuthData();
       const { error } = await supabase.auth.signOut();
       if (error) console.error('Supabase sign out error:', error);
       setUser(null);
       setIsFirstTime(false);
       setNeedsDisclaimer(false);
+      setIsLoading(false);
     } catch (error) {
       console.error('Sign out error:', error);
       await storage.clearAll();
       setUser(null);
       setIsFirstTime(false);
       setNeedsDisclaimer(false);
+      setIsLoading(false);
     }
   };
 
@@ -194,9 +194,12 @@ export function AuthProvider({ children }) {
   };
 
   const completeOnboarding = async () => {
+    setIsLoading(true);
     await storage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, true);
     setIsFirstTime(false);
     setNeedsDisclaimer(true);
+    await new Promise(resolve => setTimeout(resolve, 100));
+    setIsLoading(false);
   };
 
   const checkBiometricSupport = async () => {

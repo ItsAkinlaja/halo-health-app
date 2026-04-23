@@ -117,8 +117,12 @@ export default function HomeDashboard({ navigation }) {
     setRefreshing(false);
   }, [activeProfile]);
 
-  const displayName = activeProfile?.name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'there';
-  const capitalizedName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
+  const displayName = activeProfile?.name || 
+    (user?.user_metadata?.first_name && user?.user_metadata?.last_name 
+      ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
+      : user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'there');
+  const firstName = displayName.split(' ')[0];
+  const capitalizedName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
 
   if (loading && !refreshing) {
     return (

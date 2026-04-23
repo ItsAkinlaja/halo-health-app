@@ -10,6 +10,7 @@ export const STORAGE_KEYS = {
   BIOMETRIC_ENABLED: 'biometricEnabled',
   BIOMETRIC_EMAIL: 'biometricEmail',
   BIOMETRIC_PASSWORD: 'biometricPassword',
+  LANGUAGE: 'language',
 };
 
 // Get item from storage
