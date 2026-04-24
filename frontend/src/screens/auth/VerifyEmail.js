@@ -55,12 +55,17 @@ export default function VerifyEmail({ route, navigation }) {
     setError('');
 
     try {
-      await verifyOtp(email, otpCode);
+      const result = await verifyOtp(email, otpCode);
       setSuccess(true);
-      // Wait for success message to show, then navigation will happen automatically
+      
+      // Wait a moment to show success, then check if user is logged in
+      setTimeout(() => {
+        // The auth state change should have triggered by now
+        // If user is logged in, AppNavigator will handle navigation
+        // If not, we might need to manually navigate
+      }, 1500);
     } catch (err) {
       setError(err.message || 'Invalid verification code');
-    } finally {
       setLoading(false);
     }
   };

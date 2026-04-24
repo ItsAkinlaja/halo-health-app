@@ -140,6 +140,22 @@ export function AuthProvider({ children }) {
       type: 'signup' 
     });
     if (error) throw error;
+    
+    // After successful verification, user should be logged in
+    if (data?.session?.user) {
+      await storage.setItem(STORAGE_KEYS.USER_SESSION, data.session);
+      
+      const onboardingCompleted = await storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
+      const disclaimerAccepted = await storage.getItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED);
+      
+      setIsFirstTime(!onboardingCompleted);
+      setNeedsDisclaimer(onboardingCompleted && !disclaimerAccepted);
+      setUser(data.session.user);
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      setIsLoading(false);
+    }
+    
     return data;
   };
 

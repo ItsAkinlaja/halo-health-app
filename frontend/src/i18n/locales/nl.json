@@ -20,13 +20,11 @@
     "dontHaveAccount": "Heeft u geen account?",
     "welcomeBack": "Welkom terug",
     "signInToContinue": "Log in om door te gaan"
-  }
-}
-,
+  },
   "onboardingPreview": {
     "title": "Laten we beginnen",
-    "subtitle": "Na het aanmaken van uw account helpen we u uw ervaring te personaliseren",
-    "createAccount": "Account aanmaken",
+    "subtitle": "We helpen u uw gezondheids ervaring te personaliseren in een paar stappen",
+    "getStarted": "Beginnen",
     "step1Title": "Stel uw doelen in",
     "step1Description": "Definieer uw gezondheids- en welzijnsdoelen",
     "step2Title": "Dieetvoorkeuren",

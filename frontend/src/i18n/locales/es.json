@@ -20,13 +20,11 @@
     "dontHaveAccount": "¿No tienes una cuenta?",
     "welcomeBack": "Bienvenido de nuevo",
     "signInToContinue": "Inicia sesión para continuar"
-  }
-}
-,
+  },
   "onboardingPreview": {
     "title": "Comencemos",
-    "subtitle": "Después de crear tu cuenta, te ayudaremos a personalizar tu experiencia",
-    "createAccount": "Crear cuenta",
+    "subtitle": "Te ayudaremos a personalizar tu experiencia de salud en unos pocos pasos",
+    "getStarted": "Comenzar",
     "step1Title": "Establece tus objetivos",
     "step1Description": "Define tus objetivos de salud y bienestar",
     "step2Title": "Preferencias dietéticas",
