@@ -4,38 +4,40 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../styles/theme';
-
-const ONBOARDING_STEPS = [
-  {
-    icon: 'flag-outline',
-    title: 'Set Your Goals',
-    description: 'Define your health and wellness objectives',
-  },
-  {
-    icon: 'restaurant-outline',
-    title: 'Dietary Preferences',
-    description: 'Tell us about your food choices and restrictions',
-  },
-  {
-    icon: 'volume-high-outline',
-    title: 'Personalize Experience',
-    description: 'Choose your AI voice and notification preferences',
-  },
-  {
-    icon: 'warning-outline',
-    title: 'Health Profile',
-    description: 'Add allergies and health conditions for safety',
-  },
-  {
-    icon: 'people-outline',
-    title: 'Family Profiles',
-    description: 'Manage health for your loved ones',
-  },
-];
+import { useTranslation } from '../../hooks/useTranslation';
 
 export default function OnboardingPreview({ navigation }) {
+  const { t } = useTranslation();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
+
+  const ONBOARDING_STEPS = [
+    {
+      icon: 'flag-outline',
+      title: t('onboardingPreview.step1Title'),
+      description: t('onboardingPreview.step1Description'),
+    },
+    {
+      icon: 'restaurant-outline',
+      title: t('onboardingPreview.step2Title'),
+      description: t('onboardingPreview.step2Description'),
+    },
+    {
+      icon: 'volume-high-outline',
+      title: t('onboardingPreview.step3Title'),
+      description: t('onboardingPreview.step3Description'),
+    },
+    {
+      icon: 'warning-outline',
+      title: t('onboardingPreview.step4Title'),
+      description: t('onboardingPreview.step4Description'),
+    },
+    {
+      icon: 'people-outline',
+      title: t('onboardingPreview.step5Title'),
+      description: t('onboardingPreview.step5Description'),
+    },
+  ];
 
   useEffect(() => {
     Animated.parallel([
@@ -73,9 +75,9 @@ export default function OnboardingPreview({ navigation }) {
           >
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.title}>Let's Get You Started</Text>
+              <Text style={styles.title}>{t('onboardingPreview.title')}</Text>
               <Text style={styles.subtitle}>
-                After creating your account, we'll help you personalize your experience
+                {t('onboardingPreview.subtitle')}
               </Text>
             </View>
 
@@ -127,17 +129,17 @@ export default function OnboardingPreview({ navigation }) {
           >
             <TouchableOpacity
               style={styles.continueButton}
-              onPress={() => navigation.navigate('Register')}
+              onPress={() => navigation.navigate('OnboardingStep1')}
               activeOpacity={0.9}
             >
-              <Text style={styles.continueButtonText}>Create Account</Text>
+              <Text style={styles.continueButtonText}>{t('onboardingPreview.getStarted')}</Text>
               <Ionicons name="arrow-forward" size={20} color="#00B386" />
             </TouchableOpacity>
 
             <View style={styles.signInRow}>
-              <Text style={styles.signInText}>Already have an account? </Text>
+              <Text style={styles.signInText}>{t('welcome.alreadyHaveAccount')} </Text>
               <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                <Text style={styles.signInLink}>Sign in</Text>
+                <Text style={styles.signInLink}>{t('welcome.signIn')}</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>

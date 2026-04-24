@@ -6,24 +6,24 @@ import MainNavigator from './MainNavigator';
 import OnboardingNavigator from './OnboardingNavigator';
 import MedicalDisclaimerScreen from '../screens/common/MedicalDisclaimerScreen';
 import { useAuth } from '../context/AuthContext';
+import { useAppContext } from '../context/AppContext';
 import { COLORS } from '../styles/theme';
 
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
   const { user, isLoading, isFirstTime, needsDisclaimer } = useAuth();
+  const { setUser } = useAppContext();
   const [navigationKey, setNavigationKey] = React.useState(0);
 
+  // Sync user from AuthContext to AppContext
   useEffect(() => {
-    console.log('AppNavigator state:', { 
-      hasUser: !!user, 
-      isLoading, 
-      isFirstTime, 
-      needsDisclaimer,
-      userEmail: user?.email 
-    });
-    
-    // Force remount when auth state changes
+    if (user) {
+      setUser(user);
+    }
+  }, [user]);
+
+  useEffect(() => {
     if (!isLoading) {
       setNavigationKey(prev => prev + 1);
     }
@@ -39,13 +39,12 @@ export default function AppNavigator() {
 
   const getInitialRoute = () => {
     if (!user) return 'Auth';
-    if (isFirstTime) return 'Onboarding';
+    // Skip onboarding since it was done before registration
     if (needsDisclaimer) return 'MedicalDisclaimer';
     return 'MainApp';
   };
 
   const initialRouteName = getInitialRoute();
-  console.log('Rendering AppNavigator with initialRoute:', initialRouteName);
 
   return (
     <Stack.Navigator 

@@ -1,439 +1,156 @@
-import React, { useState } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Card } from '../../components/common/Card';
-import { Button } from '../../components/common/Button';
-import { ScoreRing } from '../../components/common/ScoreRing';
-import { useAppContext } from '../../context/AppContext';
-import { useAuth } from '../../context/AuthContext';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, getScoreColor } from '../../styles/theme';
+# ✅ Authentication & Data Flow Verification
 
-const { width: W } = Dimensions.get('window');
+## 🔐 Authentication Flow
 
-export default function Profile({ navigation }) {
-  const { user, activeProfile } = useAppContext();
-  const { signOut } = useAuth();
-  const [healthScore] = useState(72);
+### ✅ User Registration Flow
+1. **OnboardingStep8** → Saves onboarding data to AsyncStorage
+2. **Register Screen** → Retrieves onboarding data from storage
+3. **signUp()** → Includes onboarding data in user_metadata
+4. **Supabase** → Creates user with metadata
+5. **VerifyEmail** → User verifies email with OTP
+6. **AuthContext** → Marks onboarding as completed
+7. **User logged in** → Has full profile data
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-    } catch (error) {
-      console.error('Sign out error:', error);
-    }
-  };
+### ✅ User Login Flow
+1. **Login Screen** → User enters credentials
+2. **signIn()** → Authenticates with Supabase
+3. **AuthContext** → Sets user state
+4. **AppNavigator** → Syncs user to AppContext
+5. **Dashboard loads** → User data available
 
-  const displayName = activeProfile?.name || 
-    (user?.user_metadata?.first_name && user?.user_metadata?.last_name 
-      ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
-      : user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'User');
-  const displayEmail = user?.email || 'user@halohealth.com';
-  const memberSince = 'January 2024';
+### ✅ Data Sync Flow
+```
+AuthContext (user) 
+    ↓
+AppNavigator (useEffect)
+    ↓
+AppContext.setUser(user)
+    ↓
+Dashboard & Profile (useAppContext)
+    ↓
+Display user data
+```
 
-  const stats = [
-    { label: 'Products Scanned', value: '247', icon: 'scan-outline' },
-    { label: 'Clean Swaps Made', value: '38', icon: 'swap-horizontal-outline' },
-    { label: 'Days Active', value: '45', icon: 'calendar-outline' },
-  ];
+---
 
-  const healthMetrics = [
-    { label: 'Food Score', value: 78, color: getScoreColor(78) },
-    { label: 'Water Quality', value: 65, color: getScoreColor(65) },
-    { label: 'Personal Care', value: 58, color: getScoreColor(58) },
-    { label: 'Household', value: 82, color: getScoreColor(82) },
-  ];
+## 📊 Dashboard Data Flow
 
-  const menuSections = [
-    {
-      title: 'Health Profile',
-      items: [
-        { icon: 'person-outline', label: 'Personal Information', screen: 'PersonalInfo' },
-        { icon: 'fitness-outline', label: 'Dietary Restrictions', screen: 'DietaryRestrictions' },
-        { icon: 'people-outline', label: 'Family Profiles', screen: 'FamilyProfiles' },
-      ],
-    },
-    {
-      title: 'Activity',
-      items: [
-        { icon: 'time-outline', label: 'Scan History', screen: 'ScanHistory' },
-        { icon: 'bookmark-outline', label: 'Saved Products', screen: 'SavedProducts' },
-        { icon: 'restaurant-outline', label: 'Meal Plans', screen: 'Meals' },
-      ],
-    },
-    {
-      title: 'Account',
-      items: [
-        { icon: 'notifications-outline', label: 'Notifications', screen: 'Notifications' },
-        { icon: 'settings-outline', label: 'Settings', screen: 'Settings' },
-        { icon: 'log-out-outline', label: 'Sign Out', action: handleSignOut },
-      ],
-    },
-  ];
+### ✅ User Data (No Hardcoding)
+```javascript
+// From AuthContext via AppContext
+const { user, activeProfile } = useAppContext();
 
-  return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header Card */}
-        <Card style={styles.headerCard} variant="elevated">
-          <View style={styles.profileHeader}>
-            <View style={styles.avatarContainer}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
-              </View>
-              <TouchableOpacity style={styles.editAvatarBtn}>
-                <Ionicons name="camera-outline" size={16} color={COLORS.white} />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{displayName}</Text>
-              <Text style={styles.profileEmail}>{displayEmail}</Text>
-              <View style={styles.memberBadge}>
-                <Ionicons name="shield-checkmark" size={14} color={COLORS.primary} />
-                <Text style={styles.memberText}>Premium Member</Text>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={styles.editBtn}
-              onPress={() => navigation.navigate('EditProfile')}
-            >
-              <Ionicons name="create-outline" size={20} color={COLORS.textSecondary} />
-            </TouchableOpacity>
-          </View>
+// Display name extraction
+const displayName = activeProfile?.name || 
+  (user?.user_metadata?.first_name && user?.user_metadata?.last_name 
+    ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
+    : user?.user_metadata?.full_name || 
+      user?.user_metadata?.name || 
+      user?.email?.split('@')[0] || 
+      'there');
+```
 
-          <View style={styles.divider} />
+### ✅ Dynamic Data Loading
+1. **Health Score** - Calculated from recent scans
+   ```javascript
+   const avgScore = scans.reduce((sum, scan) => 
+     sum + (scan.score || 0), 0) / scans.length;
+   setHealthScore(Math.round(avgScore));
+   ```
 
-          {/* Stats Row */}
-          <View style={styles.statsRow}>
-            {stats.map((stat, idx) => (
-              <View key={idx} style={styles.statItem}>
-                <View style={styles.statIconWrap}>
-                  <Ionicons name={stat.icon} size={18} color={COLORS.primary} />
-                </View>
-                <Text style={styles.statValue}>{stat.value}</Text>
-                <Text style={styles.statLabel}>{stat.label}</Text>
-              </View>
-            ))}
-          </View>
-        </Card>
+2. **Recent Scans** - Loaded from API
+   ```javascript
+   const scansData = await scanService.getScanHistory(
+     activeProfile.id, { limit: 5, offset: 0 }
+   );
+   setRecentScans(scansData || []);
+   ```
 
-        {/* Health Score Card */}
-        <Card style={styles.scoreCard} variant="elevated">
-          <View style={styles.scoreHeader}>
-            <View>
-              <Text style={styles.scoreTitle}>Overall Health Score</Text>
-              <Text style={styles.scoreSubtitle}>Last updated today</Text>
-            </View>
-            <ScoreRing score={healthScore} size={90} strokeWidth={8} showLabel={false} />
-          </View>
+3. **Scan Stats** - Loaded from API
+   ```javascript
+   const statsData = await scanService.getScanStats(
+     activeProfile.id, '30d'
+   );
+   setScanStats(statsData);
+   ```
 
-          <View style={styles.divider} />
+4. **Notifications** - Loaded from API
+   ```javascript
+   const { count } = await notificationService.getUnreadCount(
+     user.id
+   );
+   setUnreadCount(count || 0);
+   ```
 
-          {/* Health Metrics */}
-          <View style={styles.metricsGrid}>
-            {healthMetrics.map((metric, idx) => (
-              <View key={idx} style={styles.metricItem}>
-                <View style={styles.metricHeader}>
-                  <Text style={styles.metricLabel}>{metric.label}</Text>
-                  <Text style={[styles.metricValue, { color: metric.color }]}>
-                    {metric.value}
-                  </Text>
-                </View>
-                <View style={styles.metricBar}>
-                  <View
-                    style={[
-                      styles.metricBarFill,
-                      { width: `${metric.value}%`, backgroundColor: metric.color },
-                    ]}
-                  />
-                </View>
-              </View>
-            ))}
-          </View>
+### ✅ Empty States
+- Shows "No scans yet" when no data
+- Shows "Start scanning" CTA
+- Graceful fallbacks for missing data
 
-          <Button
-            title="View Detailed Report"
-            variant="secondary"
-            size="medium"
-            icon="arrow-forward"
-            iconPosition="right"
-            onPress={() => navigation.navigate('HealthReports')}
-            style={{ marginTop: SPACING.base }}
-          />
-        </Card>
+---
 
-        {/* Menu Sections */}
-        {menuSections.map((section, sectionIdx) => (
-          <View key={sectionIdx} style={styles.menuSection}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-            <Card style={styles.menuCard}>
-              {section.items.map((item, itemIdx) => (
-                <TouchableOpacity
-                  key={itemIdx}
-                  style={[
-                    styles.menuItem,
-                    itemIdx !== section.items.length - 1 && styles.menuItemBorder,
-                  ]}
-                  onPress={() => item.action ? item.action() : navigation.navigate(item.screen)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.menuLeft}>
-                    <View style={styles.menuIconWrap}>
-                      <Ionicons name={item.icon} size={20} color={COLORS.primary} />
-                    </View>
-                    <Text style={styles.menuLabel}>{item.label}</Text>
-                  </View>
-                  <View style={styles.menuRight}>
-                    {item.badge && (
-                      <View style={styles.badge}>
-                        <Text style={styles.badgeText}>{item.badge}</Text>
-                      </View>
-                    )}
-                    <Ionicons name="chevron-forward" size={20} color={COLORS.textTertiary} />
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </Card>
-          </View>
-        ))}
+## 👤 Profile Data Flow
 
-        <View style={{ height: SPACING.xxxl }} />
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
+### ✅ User Information (No Hardcoding)
+```javascript
+// From AppContext
+const { user, activeProfile } = useAppContext();
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.background },
-  scroll: { flex: 1 },
-  content: { paddingHorizontal: SPACING.base, paddingTop: SPACING.base },
+// Display name
+const displayName = activeProfile?.name || 
+  (user?.user_metadata?.first_name && user?.user_metadata?.last_name 
+    ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
+    : user?.user_metadata?.full_name || 
+      user?.user_metadata?.name || 
+      user?.email?.split('@')[0] || 
+      'User');
 
-  // Header Card
-  headerCard: { marginBottom: SPACING.base, padding: SPACING.lg },
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-  },
-  avatarContainer: {
-    position: 'relative',
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: COLORS.white,
-    ...SHADOWS.sm,
-  },
-  avatarText: {
-    fontSize: TYPOGRAPHY.xxl,
-    fontWeight: '700',
-    color: COLORS.white,
-  },
-  editAvatarBtn: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.white,
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  profileName: {
-    fontSize: TYPOGRAPHY.xl,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginBottom: 4,
-  },
-  profileEmail: {
-    fontSize: TYPOGRAPHY.sm,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xs,
-  },
-  memberBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 4,
-    borderRadius: RADIUS.xs,
-    alignSelf: 'flex-start',
-  },
-  memberText: {
-    fontSize: TYPOGRAPHY.xs,
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  editBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+// Email
+const displayEmail = user?.email || 'user@halohealth.com';
+```
 
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginVertical: SPACING.base,
-  },
+### ⚠️ Hardcoded Data (To Be Fixed)
+These are placeholder stats that should be loaded from API:
 
-  // Stats Row
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  statItem: {
-    alignItems: 'center',
-    gap: 6,
-  },
-  statIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statValue: {
-    fontSize: TYPOGRAPHY.xl,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-  statLabel: {
-    fontSize: TYPOGRAPHY.xs,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
+1. **Stats Row** (Line 30-34)
+   ```javascript
+   const stats = [
+     { label: 'Products Scanned', value: '247', icon: 'scan-outline' },
+     { label: 'Clean Swaps Made', value: '38', icon: 'swap-horizontal-outline' },
+     { label: 'Days Active', value: '45', icon: 'calendar-outline' },
+   ];
+   ```
+   **Fix:** Load from `profileService.getAnalytics(profileId)`
 
-  // Score Card
-  scoreCard: { marginBottom: SPACING.base, padding: SPACING.lg },
-  scoreHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  scoreTitle: {
-    fontSize: TYPOGRAPHY.lg,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-  scoreSubtitle: {
-    fontSize: TYPOGRAPHY.sm,
-    color: COLORS.textSecondary,
-    marginTop: 4,
-  },
+2. **Health Metrics** (Line 36-41)
+   ```javascript
+   const healthMetrics = [
+     { label: 'Food Score', value: 78, color: getScoreColor(78) },
+     { label: 'Water Quality', value: 65, color: getScoreColor(65) },
+     { label: 'Personal Care', value: 58, color: getScoreColor(58) },
+     { label: 'Household', value: 82, color: getScoreColor(82) },
+   ];
+   ```
+   **Fix:** Load from `profileService.getHealthScore(profileId)`
 
-  // Metrics Grid
-  metricsGrid: {
-    gap: SPACING.md,
-  },
-  metricItem: {
-    gap: SPACING.xs,
-  },
-  metricHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  metricLabel: {
-    fontSize: TYPOGRAPHY.sm,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-  },
-  metricValue: {
-    fontSize: TYPOGRAPHY.base,
-    fontWeight: '700',
-  },
-  metricBar: {
-    height: 6,
-    backgroundColor: COLORS.border,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  metricBarFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
+3. **Health Score** (Line 24)
+   ```javascript
+   const [healthScore] = useState(72);
+   ```
+   **Fix:** Load from API
 
-  // Menu Sections
-  menuSection: {
-    marginBottom: SPACING.base,
-  },
-  sectionTitle: {
-    fontSize: TYPOGRAPHY.sm,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.sm,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  menuCard: {
-    padding: 0,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: SPACING.base,
-  },
-  menuItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  menuLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-    flex: 1,
-  },
-  menuIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  menuLabel: {
-    fontSize: TYPOGRAPHY.base,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-  },
-  menuRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-  },
-  badge: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 4,
-    borderRadius: RADIUS.xs,
-  },
-  badgeText: {
-    fontSize: TYPOGRAPHY.xs,
-    fontWeight: '700',
-    color: COLORS.white,
-  },
-});
+4. **Member Since** (Line 31)
+   ```javascript
+   const memberSince = 'January 2024';
+   ```
+   **Fix:** Calculate from `user.created_at`
+
+---
+
+## 🔧 Required Fixes
+
+### 1. Update Profile Screen to Load Real Data
+
+<function_calls>
+<invoke name="fsReplace">
+<parameter name="diffs">[{"newStr": "export default function Profile({ navigation }) {\n  const { user, activeProfile } = useAppContext();\n  const { signOut } = useAuth();\n  const [loading, setLoading] = useState(true);\n  const [healthScore, setHealthScore] = useState(0);\n  const [stats, setStats] = useState([\n    { label: 'Products Scanned', value: '0', icon: 'scan-outline' },\n    { label: 'Clean Swaps Made', value: '0', icon: 'swap-horizontal-outline' },\n    { label: 'Days Active', value: '0', icon: 'calendar-outline' },\n  ]);\n  const [healthMetrics, setHealthMetrics] = useState([\n    { label: 'Food Score', value: 0, color: getScoreColor(0) },\n    { label: 'Water Quality', value: 0, color: getScoreColor(0) },\n    { label: 'Personal Care', value: 0, color: getScoreColor(0) },\n    { label: 'Household', value: 0, color: getScoreColor(0) },\n  ]);\n\n  useEffect(() => {\n    loadProfileData();\n  }, [activeProfile]);\n\n  const loadProfileData = async () => {\n    if (!activeProfile?.id && !user?.id) {\n      setLoading(false);\n      return;\n    }\n\n    try {\n      setLoading(true);\n      const profileId = activeProfile?.id || user?.id;\n\n      // Load analytics\n      const analyticsData = await profileService.getAnalytics(profileId, '30d');\n      if (analyticsData) {\n        setStats([\n          { label: 'Products Scanned', value: String(analyticsData.totalScans || 0), icon: 'scan-outline' },\n          { label: 'Clean Swaps Made', value: String(analyticsData.cleanSwaps || 0), icon: 'swap-horizontal-outline' },\n          { label: 'Days Active', value: String(analyticsData.daysActive || 0), icon: 'calendar-outline' },\n        ]);\n      }\n\n      // Load health score\n      const scoreData = await profileService.getHealthScore(profileId);\n      if (scoreData) {\n        setHealthScore(scoreData.overallScore || 0);\n        setHealthMetrics([\n          { label: 'Food Score', value: scoreData.foodScore || 0, color: getScoreColor(scoreData.foodScore || 0) },\n          { label: 'Water Quality', value: scoreData.waterScore || 0, color: getScoreColor(scoreData.waterScore || 0) },\n          { label: 'Personal Care', value: scoreData.personalCareScore || 0, color: getScoreColor(scoreData.personalCareScore || 0) },\n          { label: 'Household', value: scoreData.householdScore || 0, color: getScoreColor(scoreData.householdScore || 0) },\n        ]);\n      }\n    } catch (error) {\n      console.warn('Failed to load profile data:', error.message);\n    } finally {\n      setLoading(false);\n    }\n  };", "oldStr": "export default function Profile({ navigation }) {\n  const { user, activeProfile } = useAppContext();\n  const { signOut } = useAuth();\n  const [healthScore] = useState(72);"}]

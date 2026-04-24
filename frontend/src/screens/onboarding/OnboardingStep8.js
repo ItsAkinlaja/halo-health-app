@@ -63,12 +63,10 @@ export default function OnboardingStep8({ navigation, nextStep }) {
       return;
     }
     
-    console.log('Starting onboarding completion...');
     setCompleting(true);
     
     try {
       await nextStep();
-      console.log('Onboarding completion successful');
     } catch (error) {
       console.error('Onboarding completion error:', error);
       Alert.alert('Error', 'Failed to complete setup. Please try again.');

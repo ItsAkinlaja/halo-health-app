@@ -23,8 +23,6 @@ export function AuthProvider({ children }) {
         
         if (event === 'INITIAL_SESSION') return;
         
-        console.log('Auth state changed:', event);
-        
         if (event === 'SIGNED_OUT') {
           isProcessing.current = true;
           setUser(null);
@@ -90,22 +88,15 @@ export function AuthProvider({ children }) {
   };
 
   const signIn = async (email, password) => {
-    console.log('signIn called for:', email);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       console.error('signIn error:', error);
       throw error;
     }
     
-    console.log('signIn successful, user:', data?.user?.email);
-    
     if (data?.user) {
-      console.log('Updating auth state manually...');
-      
       const onboardingCompleted = await storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
       const disclaimerAccepted = await storage.getItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED);
-      
-      console.log('Onboarding status:', { onboardingCompleted, disclaimerAccepted });
       
       // Update all states in correct order
       setIsLoading(true); // Set loading first
@@ -114,17 +105,11 @@ export function AuthProvider({ children }) {
       // Set states
       setIsFirstTime(onboardingCompleted !== true);
       setNeedsDisclaimer(onboardingCompleted === true && disclaimerAccepted !== true);
-      setUser(data.user); // Set user last to trigger navigation
-      
-      console.log('Auth state updated:', {
-        hasUser: true,
-        isFirstTime: onboardingCompleted !== true,
-        needsDisclaimer: onboardingCompleted === true && disclaimerAccepted !== true
-      });
+      setUser(data.user);
       
       // Small delay to ensure state updates propagate
       await new Promise(resolve => setTimeout(resolve, 100));
-      setIsLoading(false); // Trigger navigation
+      setIsLoading(false);
     }
     
     return data;
@@ -141,6 +126,10 @@ export function AuthProvider({ children }) {
       },
     });
     if (error) throw error;
+    
+    // Mark onboarding as completed since it was done before registration
+    await storage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, true);
+    
     return data;
   };
 

@@ -13,7 +13,6 @@ export default function Welcome({ navigation }) {
   const slideAnim = useRef(new Animated.Value(50)).current;
 
   useEffect(() => {
-    
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,

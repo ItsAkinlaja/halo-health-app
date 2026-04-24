@@ -11,6 +11,7 @@ export const STORAGE_KEYS = {
   BIOMETRIC_EMAIL: 'biometricEmail',
   BIOMETRIC_PASSWORD: 'biometricPassword',
   LANGUAGE: 'language',
+  ONBOARDING_DATA: 'onboardingData',
 };
 
 // Get item from storage

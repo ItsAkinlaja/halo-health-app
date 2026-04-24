@@ -22,14 +22,14 @@ export default function LanguageSelection({ navigation }) {
     setSelectedLanguage(locale);
   }, [locale]);
 
-  const handleLanguageSelect = (languageCode) => {
+  const handleLanguageSelect = async (languageCode) => {
     setSelectedLanguage(languageCode);
+    // Change language instantly across the entire app
+    await changeLanguage(languageCode);
   };
 
-  const handleDone = async () => {
-    // Change language globally
-    await changeLanguage(selectedLanguage);
-    // Navigate to onboarding preview
+  const handleDone = () => {
+    // Language is already changed, just navigate
     navigation.navigate('OnboardingPreview');
   };
 

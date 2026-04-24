@@ -9,6 +9,7 @@ import { Button } from '../../components/common/Button';
 import { Card } from '../../components/common/Card';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../styles/theme';
+import storage, { STORAGE_KEYS } from '../../utils/storage';
 
 export default function Register({ navigation }) {
   const [email, setEmail] = useState('');
@@ -99,11 +100,15 @@ export default function Register({ navigation }) {
 
     setIsLoading(true);
     try {
+      // Get onboarding data from storage
+      const onboardingData = await storage.getItem(STORAGE_KEYS.ONBOARDING_DATA) || {};
+      
       await signUp(email, password, {
         halo_health_id: haloHealthId,
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         full_name: `${firstName.trim()} ${lastName.trim()}`,
+        onboarding_data: onboardingData, // Include onboarding data in user metadata
       });
       
       navigation.navigate('VerifyEmail', { email: email.trim() });
@@ -149,8 +154,8 @@ export default function Register({ navigation }) {
 
             {/* Logo Section */}
             <View style={styles.logoSection}>
-              <Text style={styles.logo}>Halo Health</Text>
-              <Text style={styles.tagline}>Create your account</Text>
+              <Text style={styles.logo}>Almost There!</Text>
+              <Text style={styles.tagline}>Create your account to save your preferences</Text>
             </View>
 
             {/* Form Card */}
