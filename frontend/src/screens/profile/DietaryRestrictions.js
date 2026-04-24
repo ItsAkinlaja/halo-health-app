@@ -14,6 +14,7 @@ export default function DietaryRestrictions({ navigation }) {
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selected, setSelected] = useState([]);
+  const [otherRestriction, setOtherRestriction] = useState('');
 
   useEffect(() => {
     if (activeProfile?.id) {
@@ -48,7 +49,11 @@ export default function DietaryRestrictions({ navigation }) {
 
     try {
       setSaving(true);
-      await profileService.updateDietaryRestrictions(activeProfile.id, selected);
+      const finalRestrictions = [
+        ...selected.filter(id => id !== 'other'),
+        ...(selected.includes('other') && otherRestriction.trim() ? [otherRestriction.trim()] : [])
+      ];
+      await profileService.updateDietaryRestrictions(activeProfile.id, finalRestrictions);
       Alert.alert('Success', 'Dietary restrictions updated successfully', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
@@ -77,6 +82,7 @@ export default function DietaryRestrictions({ navigation }) {
     { id: 'pescatarian', label: 'Pescatarian' },
     { id: 'mediterranean', label: 'Mediterranean' },
     { id: 'whole30', label: 'Whole30' },
+    { id: 'other', label: 'Other' },
   ];
 
   const toggleRestriction = (id) => {
@@ -161,6 +167,23 @@ export default function DietaryRestrictions({ navigation }) {
             );
           })}
         </View>
+
+        {selected.includes('other') && (
+          <View style={styles.otherInputWrap}>
+            <Text style={styles.label}>Please specify other dietary restriction</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="restaurant-outline" size={20} color={COLORS.textSecondary} />
+              <TextInput
+                style={styles.input}
+                value={otherRestriction}
+                onChangeText={setOtherRestriction}
+                placeholder="e.g. Low Sodium, No Sugar"
+                placeholderTextColor={COLORS.textTertiary}
+                autoCapitalize="words"
+              />
+            </View>
+          </View>
+        )}
 
         {filteredRestrictions.length === 0 && (
           <Card style={styles.emptyCard}>
@@ -303,6 +326,32 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
+  },
+  otherInputWrap: {
+    marginTop: SPACING.lg,
+    gap: SPACING.xs,
+  },
+  label: {
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: SPACING.md,
+  },
+  input: {
+    flex: 1,
+    fontSize: TYPOGRAPHY.base,
+    color: COLORS.textPrimary,
+    paddingVertical: SPACING.md,
+    marginLeft: SPACING.sm,
   },
   loadingContainer: {
     flex: 1,

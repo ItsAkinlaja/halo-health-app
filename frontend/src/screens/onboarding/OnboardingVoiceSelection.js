@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
+import HaloMascot from '../../components/common/HaloMascot';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../styles/theme';
 
 const VOICE_OPTIONS = [
@@ -112,6 +113,10 @@ export default function OnboardingVoiceSelection({ navigation, nextStep }) {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.mascotWrapper}>
+          <HaloMascot mood={playingVoice ? 'excited' : 'happy'} size={120} animated={true} />
+        </View>
+
         <Text style={styles.title}>Choose Halo's Voice</Text>
         <Text style={styles.subtitle}>
           Select the voice that Halo will use when speaking scan results, tips, and health coaching messages.
@@ -227,8 +232,14 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.xl,
+    paddingTop: SPACING.base,
     paddingBottom: SPACING.xxl,
+  },
+  mascotWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: SPACING.lg,
+    height: 160,
   },
   title: {
     fontSize: TYPOGRAPHY.xxl,

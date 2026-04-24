@@ -3,6 +3,7 @@ const productService = require('./productService');
 const aiService = require('./aiService');
 const ocrService = require('./ocrService');
 const healthScoreService = require('./healthScoreService');
+const productHealthScoreService = require('./productHealthScoreService');
 const { ValidationError, NotFoundError } = require('../middleware/errorHandler');
 const { logger, logAICall } = require('../utils/logger');
 
@@ -11,41 +12,35 @@ class ScanService {
     try {
       logger.info(`Starting barcode scan: ${barcode} for user: ${userId}`);
 
-      // Look up product in database
-      let product = await productService.getProductByBarcode(barcode);
+      // Look up product with personalized scoring
+      let product = await productService.getProductByBarcode(barcode, profileId);
       
-      if (!product) {
-        // Try external APIs (Open Food Facts, etc.)
-        product = await this.searchExternalDatabases(barcode);
-        
-        if (product) {
-          // Save to our database
-          product = await productService.createProduct(product);
-          logger.info(`Created new product from external API: ${barcode}`);
-        }
-      }
-
       if (!product) {
         return {
           success: false,
           needsPhotoScan: true,
           barcode,
-          message: 'Product not found. Please scan the ingredient label.',
+          message: 'Product not found in our database. Try scanning the ingredient label or searching manually.',
         };
       }
 
-      // Get user profile
+      // Get user profile for analysis
       const profile = await this.getUserProfile(profileId);
       
-      // Generate personalized analysis
+      // Generate personalized analysis using AI
       const analysis = await this.generateProductAnalysis(product, profile);
-      const personalizedScore = await this.calculatePersonalizedScore(product, profile);
       
       // Check for recalls
       const recallInfo = await this.checkProductRecall(product.id);
       
       // Record the scan
-      await this.recordScan(userId, profileId, product.id, 'barcode', personalizedScore);
+      const scanRecord = await this.recordScan(
+        userId, 
+        profileId, 
+        product.id, 
+        'barcode', 
+        product.score_data?.overall_score || product.health_score || 50
+      );
       
       // Update user's health score
       await healthScoreService.updateHealthScore(userId, profileId);
@@ -55,12 +50,25 @@ class ScanService {
       return {
         success: true,
         product: {
-          ...product,
-          personalized_score: personalizedScore,
+          id: product.id,
+          barcode: product.barcode,
+          name: product.name,
+          brand: product.brand,
+          category: product.category,
+          image_url: product.image_url,
+          ingredients: product.ingredients,
+          nutrition_info: product.nutrition_info,
+          allergens_present: product.allergens_present,
+          toxins_detected: product.toxins_detected,
+          health_score: product.health_score,
+          score_data: product.score_data,
           halo_analysis: analysis,
           recall_info: recallInfo,
         },
-        scan_time: new Date().toISOString(),
+        scan: {
+          id: scanRecord.id,
+          created_at: scanRecord.created_at,
+        },
       };
     } catch (error) {
       logger.error('Barcode scan error:', error);
@@ -408,7 +416,7 @@ class ScanService {
   }
 
   async recordScan(userId, profileId, productId, scanType, score) {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('product_scans')
       .insert([{
         user_id: userId,
@@ -417,9 +425,13 @@ class ScanService {
         scan_type: scanType,
         score_given: score,
         created_at: new Date().toISOString(),
-      }]);
+      }])
+      .select()
+      .single();
 
     if (error) throw error;
+    
+    return data;
   }
 
   async saveProduct(userId, productId, listType = 'clean_choices') {

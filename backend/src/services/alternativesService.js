@@ -1,76 +1,145 @@
 const { supabase } = require('../utils/database');
-const aiService = require('./aiService');
+const productHealthScoreService = require('./productHealthScoreService');
 const { logger } = require('../utils/logger');
 
 class AlternativesService {
   async findHealthierAlternatives(productId, profileId, limit = 5) {
     try {
       const product = await this.getProduct(productId);
-      const profile = await this.getProfile(profileId);
+      const profile = profileId ? await this.getProfile(profileId) : null;
 
       // Get alternatives from database
-      const dbAlternatives = await this.findDatabaseAlternatives(product, limit);
+      const dbAlternatives = await this.findDatabaseAlternatives(product, limit * 2);
 
-      // Use AI to rank and personalize alternatives
-      const rankedAlternatives = await this.rankAlternatives(product, dbAlternatives, profile);
+      // Calculate personalized scores for each alternative
+      const scoredAlternatives = await Promise.all(
+        dbAlternatives.map(async (alt) => {
+          const scoreData = await productHealthScoreService.calculateProductScore(alt, profileId);
+          return {
+            ...alt,
+            personalized_score: scoreData.overall_score,
+            score_improvement: scoreData.overall_score - (product.health_score || 50),
+            score_data: scoreData,
+          };
+        })
+      );
 
-      return rankedAlternatives;
+      // Filter and sort by improvement
+      const betterAlternatives = scoredAlternatives
+        .filter(alt => alt.score_improvement > 5) // At least 5 points better
+        .sort((a, b) => b.score_improvement - a.score_improvement)
+        .slice(0, limit);
+
+      // Add reasons for each alternative
+      return betterAlternatives.map(alt => ({
+        ...alt,
+        reason: this.generateAlternativeReason(product, alt, profile),
+      }));
     } catch (error) {
       logger.error('Error finding alternatives:', error);
-      throw error;
+      return []; // Return empty array on error instead of throwing
     }
   }
 
   async findDatabaseAlternatives(product, limit) {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('category', product.category)
-      .neq('id', product.id)
-      .gte('health_score', product.health_score || 0)
-      .eq('is_active', true)
-      .order('health_score', { ascending: false })
-      .limit(limit * 2);
+    try {
+      // Find products in same category with similar or better scores
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('category', product.category)
+        .neq('id', product.id)
+        .eq('is_active', true)
+        .order('health_score', { ascending: false })
+        .limit(limit);
 
-    if (error) throw error;
-    return data || [];
+      if (error) {
+        logger.error('Error fetching alternatives from database:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      logger.error('Error in findDatabaseAlternatives:', error);
+      return [];
+    }
   }
 
-  async rankAlternatives(originalProduct, alternatives, profile) {
-    const prompt = `Rank these product alternatives for a user:
+  generateAlternativeReason(originalProduct, alternative, profile) {
+    const reasons = [];
 
-Original Product: ${originalProduct.name} (Health Score: ${originalProduct.health_score})
+    // Score improvement
+    if (alternative.score_improvement >= 20) {
+      reasons.push(`Significantly healthier with ${alternative.score_improvement} point improvement`);
+    } else if (alternative.score_improvement >= 10) {
+      reasons.push(`Healthier option with ${alternative.score_improvement} point improvement`);
+    } else {
+      reasons.push(`Slightly better with ${alternative.score_improvement} point improvement`);
+    }
 
-User Profile:
-- Health Goals: ${profile.health_goals?.join(', ') || 'None'}
-- Dietary Restrictions: ${profile.dietary_restrictions?.join(', ') || 'None'}
-- Allergies: ${profile.allergies_intolerances?.join(', ') || 'None'}
+    // Processing level
+    const processingLevels = ['unprocessed', 'processed_culinary', 'processed', 'ultra_processed'];
+    const origLevel = processingLevels.indexOf(originalProduct.processing_level || 'processed');
+    const altLevel = processingLevels.indexOf(alternative.processing_level || 'processed');
+    
+    if (altLevel < origLevel) {
+      reasons.push('Less processed');
+    }
 
-Alternatives:
-${alternatives.map((p, i) => `${i + 1}. ${p.name} - ${p.brand} (Score: ${p.health_score})`).join('\n')}
+    // Toxins
+    const origToxins = originalProduct.toxins_detected?.length || 0;
+    const altToxins = alternative.toxins_detected?.length || 0;
+    
+    if (origToxins > altToxins) {
+      if (altToxins === 0) {
+        reasons.push('No harmful ingredients');
+      } else {
+        reasons.push('Fewer harmful ingredients');
+      }
+    }
 
-Return JSON array with top alternatives, each with:
-{
-  "productId": "id",
-  "reason": "why this is better",
-  "keyBenefits": ["benefit1", "benefit2"]
-}`;
+    // Allergens (if profile provided)
+    if (profile && profile.allergies_intolerances) {
+      const origAllergens = originalProduct.allergens_present || [];
+      const altAllergens = alternative.allergens_present || [];
+      
+      const origHasUserAllergen = origAllergens.some(a => 
+        profile.allergies_intolerances.some(ua => 
+          a.toLowerCase().includes(ua.allergy_type.toLowerCase())
+        )
+      );
+      
+      const altHasUserAllergen = altAllergens.some(a => 
+        profile.allergies_intolerances.some(ua => 
+          a.toLowerCase().includes(ua.allergy_type.toLowerCase())
+        )
+      );
+      
+      if (origHasUserAllergen && !altHasUserAllergen) {
+        reasons.push('Safe for your allergies');
+      }
+    }
 
-    const completion = await aiService.openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [
-        { role: 'system', content: 'You are a health product recommendation expert. Rank alternatives based on health benefits.' },
-        { role: 'user', content: prompt }
-      ],
-      max_tokens: 800,
-      temperature: 0.3,
-    });
+    // Nutrition
+    if (alternative.nutrition_info && originalProduct.nutrition_info) {
+      const altNutr = alternative.nutrition_info;
+      const origNutr = originalProduct.nutrition_info;
+      
+      if (altNutr.sugars < origNutr.sugars * 0.7) {
+        reasons.push('Lower sugar');
+      }
+      if (altNutr.sodium < origNutr.sodium * 0.7) {
+        reasons.push('Lower sodium');
+      }
+      if (altNutr.fiber > origNutr.fiber * 1.3) {
+        reasons.push('Higher fiber');
+      }
+      if (altNutr.proteins > origNutr.proteins * 1.3) {
+        reasons.push('Higher protein');
+      }
+    }
 
-    const ranked = JSON.parse(completion.choices[0].message.content);
-    return ranked.map(r => ({
-      ...alternatives.find(a => a.id === r.productId),
-      recommendation: { reason: r.reason, keyBenefits: r.keyBenefits }
-    }));
+    return reasons.slice(0, 3).join(', ') || 'Better overall health profile';
   }
 
   async getProduct(productId) {
@@ -85,11 +154,20 @@ Return JSON array with top alternatives, each with:
 
   async getProfile(profileId) {
     const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
+      .from('health_profiles')
+      .select(`
+        *,
+        dietary_restrictions (*),
+        allergies_intolerances (*)
+      `)
       .eq('id', profileId)
       .single();
-    if (error) throw error;
+    
+    if (error) {
+      logger.error('Error fetching profile:', error);
+      return null;
+    }
+    
     return data;
   }
 }

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { supabase } from '../services/supabase';
 import storage, { STORAGE_KEYS } from '../utils/storage';
@@ -134,12 +135,16 @@ export function AuthProvider({ children }) {
   };
 
   const verifyOtp = async (email, token) => {
+    setIsLoading(true);
     const { data, error } = await supabase.auth.verifyOtp({ 
       email, 
       token, 
       type: 'signup' 
     });
-    if (error) throw error;
+    if (error) {
+      setIsLoading(false);
+      throw error;
+    }
     
     // After successful verification, user should be logged in
     if (data?.session?.user) {
@@ -152,7 +157,9 @@ export function AuthProvider({ children }) {
       setNeedsDisclaimer(onboardingCompleted && !disclaimerAccepted);
       setUser(data.session.user);
       
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
+      setIsLoading(false);
+    } else {
       setIsLoading(false);
     }
     
@@ -167,7 +174,16 @@ export function AuthProvider({ children }) {
   const signOut = async () => {
     try {
       setIsLoading(true);
+      
+      // Preserve ONBOARDING_COMPLETED so returning users go to Login
+      const onboardingCompleted = await storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
+      
       await storage.clearAuthData();
+      
+      if (onboardingCompleted) {
+        await storage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, true);
+      }
+      
       const { error } = await supabase.auth.signOut();
       if (error) console.error('Supabase sign out error:', error);
       setUser(null);
@@ -244,17 +260,13 @@ export function AuthProvider({ children }) {
   };
 
   const deleteAccount = async () => {
-    if (!user) throw new Error('No user logged in');
-    
-    // Call backend API to delete account
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/delete-account`, {
+      const baseUrl = process.env.EXPO_PUBLIC_API_URL || (Platform.OS === 'android' ? 'http://10.0.2.2:3001' : 'http://localhost:3001');
+      const response = await fetch(`${baseUrl}/api/auth/delete-account`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${session?.access_token}`,
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
         },
       });
       

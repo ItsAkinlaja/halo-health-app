@@ -25,6 +25,7 @@ const ALLERGIES = [
   { id: 'celery', label: 'Celery' },
   { id: 'lupin', label: 'Lupin' },
   { id: 'molluscs', label: 'Molluscs' },
+  { id: 'other', label: 'Other' },
 ];
 
 export default function Allergies({ navigation }) {
@@ -33,6 +34,7 @@ export default function Allergies({ navigation }) {
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selected, setSelected] = useState([]);
+  const [otherAllergy, setOtherAllergy] = useState('');
 
   useEffect(() => {
     if (activeProfile?.id) {
@@ -61,7 +63,11 @@ export default function Allergies({ navigation }) {
     }
     try {
       setSaving(true);
-      await profileService.updateAllergies(activeProfile.id, selected);
+      const finalAllergies = [
+        ...selected.filter(id => id !== 'other'),
+        ...(selected.includes('other') && otherAllergy.trim() ? [otherAllergy.trim()] : [])
+      ];
+      await profileService.updateAllergies(activeProfile.id, finalAllergies);
       Alert.alert('Success', 'Allergies updated successfully', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
@@ -151,6 +157,23 @@ export default function Allergies({ navigation }) {
             );
           })}
         </View>
+
+        {selected.includes('other') && (
+          <View style={styles.otherInputWrap}>
+            <Text style={styles.label}>Please specify other allergy</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="medical-outline" size={20} color={COLORS.textSecondary} />
+              <TextInput
+                style={styles.input}
+                value={otherAllergy}
+                onChangeText={setOtherAllergy}
+                placeholder="e.g. Strawberries, Garlic"
+                placeholderTextColor={COLORS.textTertiary}
+                autoCapitalize="words"
+              />
+            </View>
+          </View>
+        )}
 
         {filtered.length === 0 && (
           <Card style={styles.emptyCard}>
@@ -256,6 +279,32 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
+  },
+  otherInputWrap: {
+    marginTop: SPACING.lg,
+    gap: SPACING.xs,
+  },
+  label: {
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: SPACING.md,
+  },
+  input: {
+    flex: 1,
+    fontSize: TYPOGRAPHY.base,
+    color: COLORS.textPrimary,
+    paddingVertical: SPACING.md,
+    marginLeft: SPACING.sm,
   },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: SPACING.base },
   loadingText: { fontSize: TYPOGRAPHY.base, color: COLORS.textSecondary, fontWeight: '500' },

@@ -8,6 +8,7 @@ export default function HaloMascot({ mood = 'happy', size = 80, animated = true 
   const glowAnim = useRef(new Animated.Value(0)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
   const blinkAnim = useRef(new Animated.Value(1)).current;
+  const rotationAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (!animated) return;
@@ -16,13 +17,13 @@ export default function HaloMascot({ mood = 'happy', size = 80, animated = true 
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.05,
-          duration: 2000,
+          toValue: 1.03,
+          duration: 3000,
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 2000,
+          duration: 3000,
           useNativeDriver: true,
         }),
       ])
@@ -33,12 +34,12 @@ export default function HaloMascot({ mood = 'happy', size = 80, animated = true 
       Animated.sequence([
         Animated.timing(glowAnim, {
           toValue: 1,
-          duration: 1500,
+          duration: 2000,
           useNativeDriver: true,
         }),
         Animated.timing(glowAnim, {
           toValue: 0,
-          duration: 1500,
+          duration: 2000,
           useNativeDriver: true,
         }),
       ])
@@ -48,30 +49,39 @@ export default function HaloMascot({ mood = 'happy', size = 80, animated = true 
     Animated.loop(
       Animated.sequence([
         Animated.timing(floatAnim, {
-          toValue: -8,
-          duration: 2500,
+          toValue: -12,
+          duration: 3500,
           useNativeDriver: true,
         }),
         Animated.timing(floatAnim, {
           toValue: 0,
-          duration: 2500,
+          duration: 3500,
           useNativeDriver: true,
         }),
       ])
     ).start();
 
+    // Rotation for halo
+    Animated.loop(
+      Animated.timing(rotationAnim, {
+        toValue: 1,
+        duration: 8000,
+        useNativeDriver: true,
+      })
+    ).start();
+
     // Blink animation
     Animated.loop(
       Animated.sequence([
-        Animated.delay(3000),
+        Animated.delay(4000),
         Animated.timing(blinkAnim, {
           toValue: 0,
-          duration: 100,
+          duration: 150,
           useNativeDriver: true,
         }),
         Animated.timing(blinkAnim, {
           toValue: 1,
-          duration: 100,
+          duration: 150,
           useNativeDriver: true,
         }),
       ])
@@ -80,44 +90,64 @@ export default function HaloMascot({ mood = 'happy', size = 80, animated = true 
 
   const getMoodColors = () => {
     const moodColors = {
-      happy: ['#4A90E2', '#5BA3F5', '#6BB6FF'],
-      excited: ['#9B59B6', '#AF7AC5', '#C39BD3'],
-      concerned: ['#F39C12', '#F5AB35', '#F7BA58'],
-      sad: ['#95A5A6', '#AAB7B8', '#BDC3C7'],
-      neutral: ['#3498DB', '#5DADE2', '#85C1E9'],
+      happy: ['#00F2FE', '#4FACFE', '#007AFF'], // Cyan to Blue (Divine/Futuristic)
+      excited: ['#F093FB', '#F5576C', '#FF0844'], // Pink to Red
+      concerned: ['#FAD961', '#F76B1C', '#FF9500'], // Gold to Orange
+      sad: ['#E2E2E2', '#C9C9C9', '#8E8E93'], // Silver to Gray
+      neutral: ['#00B386', '#00D2FF', '#007AFF'], // Emerald to Blue
     };
     return moodColors[mood] || moodColors.happy;
   };
 
   const colors = getMoodColors();
+  
   const glowOpacity = glowAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.3, 0.7],
+    outputRange: [0.4, 0.8],
+  });
+
+  const haloRotation = rotationAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
   });
 
   return (
     <Animated.View
       style={[
         styles.container,
-        { width: size, height: size * 1.3 },
+        { width: size * 1.5, height: size * 1.8 },
         animated && { transform: [{ translateY: floatAnim }] },
       ]}
     >
-      {/* Outer glow */}
+      {/* 1. Divine Aura / Deep Glow */}
       <Animated.View
         style={[
-          styles.glowRing,
+          styles.aura,
           {
-            width: size * 1.3,
-            height: size * 1.3,
-            borderRadius: size * 0.65,
+            width: size * 1.6,
+            height: size * 1.6,
+            borderRadius: size * 0.8,
             opacity: glowOpacity,
-            backgroundColor: colors[0] + '20',
+            backgroundColor: colors[0],
+            shadowColor: colors[0],
+            shadowRadius: size * 0.4,
+            shadowOpacity: 0.8,
           },
         ]}
       />
 
-      {/* Character body */}
+      {/* 2. Outer Halo Rings */}
+      <Animated.View
+        style={[
+          styles.haloContainer,
+          { transform: [{ rotateX: '70deg' }, { rotateZ: haloRotation }] }
+        ]}
+      >
+        <View style={[styles.haloRing, { width: size * 1.4, height: size * 1.4, borderRadius: size * 0.7, borderColor: colors[0] + '40', borderWidth: 2 }]} />
+        <View style={[styles.haloRing, { width: size * 1.2, height: size * 1.2, borderRadius: size * 0.6, borderColor: colors[1] + '60', borderWidth: 1, borderStyle: 'dashed' }]} />
+      </Animated.View>
+
+      {/* 3. Main Character Body (3D Sphere Simulation) */}
       <Animated.View
         style={[
           styles.body,
@@ -129,139 +159,104 @@ export default function HaloMascot({ mood = 'happy', size = 80, animated = true 
           },
         ]}
       >
+        {/* Base Gradient */}
         <LinearGradient
-          colors={colors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+          colors={[colors[0], colors[1], colors[2]]}
+          start={{ x: 0.2, y: 0.2 }}
+          end={{ x: 0.8, y: 0.8 }}
           style={styles.gradient}
         >
-          {/* Face */}
+          {/* Surface Shine (Top Left) */}
+          <LinearGradient
+            colors={['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)']}
+            style={[styles.surfaceShine, { width: size, height: size }]}
+          />
+
+          {/* Core Face Area */}
           <View style={styles.face}>
-            {/* Eyes */}
+            {/* Cybernetic Eyes */}
             <View style={styles.eyesContainer}>
-              <Animated.View
-                style={[
-                  styles.eye,
-                  { width: size * 0.12, height: size * 0.12, opacity: blinkAnim },
-                ]}
-              />
-              <Animated.View
-                style={[
-                  styles.eye,
-                  { width: size * 0.12, height: size * 0.12, opacity: blinkAnim },
-                ]}
-              />
+              <View style={[styles.eyeOuter, { width: size * 0.18, height: size * 0.18 }]}>
+                <Animated.View
+                  style={[
+                    styles.eyeInner,
+                    { 
+                      width: size * 0.08, 
+                      height: size * 0.08, 
+                      opacity: blinkAnim,
+                      backgroundColor: COLORS.white,
+                      shadowColor: COLORS.white,
+                      shadowRadius: 4,
+                      shadowOpacity: 1,
+                    },
+                  ]}
+                />
+              </View>
+              <View style={[styles.eyeOuter, { width: size * 0.18, height: size * 0.18 }]}>
+                <Animated.View
+                  style={[
+                    styles.eyeInner,
+                    { 
+                      width: size * 0.08, 
+                      height: size * 0.08, 
+                      opacity: blinkAnim,
+                      backgroundColor: COLORS.white,
+                      shadowColor: COLORS.white,
+                      shadowRadius: 4,
+                      shadowOpacity: 1,
+                    },
+                  ]}
+                />
+              </View>
             </View>
 
-            {/* Smile */}
-            {mood === 'happy' && (
-              <View
-                style={[
-                  styles.smile,
-                  {
-                    width: size * 0.35,
-                    height: size * 0.2,
-                    borderBottomLeftRadius: size * 0.175,
-                    borderBottomRightRadius: size * 0.175,
-                    borderWidth: size * 0.04,
-                  },
-                ]}
-              />
-            )}
-
-            {/* Neutral mouth */}
-            {mood === 'neutral' && (
-              <View
-                style={[
-                  styles.neutralMouth,
-                  { width: size * 0.25, height: size * 0.04, borderRadius: size * 0.02 },
-                ]}
-              />
-            )}
-
-            {/* Concerned mouth */}
-            {mood === 'concerned' && (
-              <View
-                style={[
-                  styles.concernedMouth,
-                  {
-                    width: size * 0.3,
-                    height: size * 0.15,
-                    borderTopLeftRadius: size * 0.15,
-                    borderTopRightRadius: size * 0.15,
-                    borderWidth: size * 0.04,
-                  },
-                ]}
-              />
-            )}
+            {/* Futuristic Mouth */}
+            <View style={styles.mouthContainer}>
+              {mood === 'happy' && (
+                <View style={[styles.smile, { width: size * 0.3, height: size * 0.1, borderColor: 'rgba(255,255,255,0.8)', borderBottomWidth: 3, borderBottomLeftRadius: size * 0.15, borderBottomRightRadius: size * 0.15 }]} />
+              )}
+              {mood === 'neutral' && (
+                <View style={[styles.neutralMouth, { width: size * 0.2, height: 3, backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 2 }]} />
+              )}
+              {mood === 'concerned' && (
+                <View style={[styles.concernedMouth, { width: size * 0.25, height: size * 0.08, borderColor: 'rgba(255,255,255,0.8)', borderTopWidth: 3, borderTopLeftRadius: size * 0.12, borderTopRightRadius: size * 0.12 }]} />
+              )}
+            </View>
           </View>
 
-          {/* Inner shine */}
-          <View
-            style={[
-              styles.shine,
-              {
-                width: size * 0.3,
-                height: size * 0.3,
-                borderRadius: size * 0.15,
-                top: size * 0.15,
-                left: size * 0.15,
-              },
-            ]}
+          {/* Bottom Shadow (Inside Sphere) */}
+          <LinearGradient
+            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.3)']}
+            style={[styles.bottomShadow, { width: size, height: size }]}
           />
         </LinearGradient>
+
+        {/* Glassmorphism Overlay */}
+        <View style={[styles.glassOverlay, { width: size, height: size, borderRadius: size / 2 }]} />
       </Animated.View>
 
-      {/* Halo ring */}
-      <Animated.View
-        style={[
-          styles.haloRing,
-          {
-            width: size * 0.75,
-            height: size * 0.18,
-            borderRadius: size * 0.375,
-            top: -size * 0.1,
-            borderColor: colors[2],
-            borderWidth: size * 0.04,
-            opacity: glowOpacity,
-          },
-        ]}
-      />
-
-      {/* Sparkles */}
+      {/* 4. Floating Energy Shards */}
       {animated && (
-        <>
-          <Animated.View
-            style={[
-              styles.sparkle,
-              {
-                width: size * 0.08,
-                height: size * 0.08,
-                top: size * 0.1,
-                right: -size * 0.05,
-                opacity: glowOpacity,
-              },
-            ]}
-          >
-            <View style={[styles.sparkleH, { backgroundColor: colors[1] }]} />
-            <View style={[styles.sparkleV, { backgroundColor: colors[1] }]} />
-          </Animated.View>
-          <Animated.View
-            style={[
-              styles.sparkle,
-              {
-                width: size * 0.06,
-                height: size * 0.06,
-                bottom: size * 0.15,
-                left: -size * 0.03,
-                opacity: glowOpacity,
-              },
-            ]}
-          >
-            <View style={[styles.sparkleH, { backgroundColor: colors[2] }]} />
-            <View style={[styles.sparkleV, { backgroundColor: colors[2] }]} />
-          </Animated.View>
-        </>
+        <View style={styles.shardsContainer}>
+          {[0, 1, 2].map((i) => (
+            <Animated.View
+              key={i}
+              style={[
+                styles.shard,
+                {
+                  width: size * 0.06,
+                  height: size * 0.06,
+                  backgroundColor: colors[0],
+                  opacity: glowOpacity,
+                  transform: [
+                    { rotate: haloRotation },
+                    { translateX: size * (0.6 + i * 0.1) }
+                  ]
+                }
+              ]}
+            />
+          ))}
+        </View>
       )}
     </Animated.View>
   );
@@ -273,74 +268,96 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
   },
-  glowRing: {
+  aura: {
+    position: 'absolute',
+    blurRadius: 20,
+  },
+  haloContainer: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  haloRing: {
     position: 'absolute',
   },
   body: {
     overflow: 'hidden',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 15,
+    elevation: 12,
+    backgroundColor: 'transparent',
   },
   gradient: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  surfaceShine: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  bottomShadow: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+  },
+  glassOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
   face: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    zIndex: 10,
   },
   eyesContainer: {
     flexDirection: 'row',
     gap: 12,
+    marginBottom: 8,
   },
-  eye: {
-    backgroundColor: COLORS.white,
+  eyeOuter: {
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderRadius: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  eyeInner: {
     borderRadius: 100,
   },
+  mouthContainer: {
+    height: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   smile: {
-    borderColor: COLORS.white,
-    borderTopWidth: 0,
     backgroundColor: 'transparent',
-    marginTop: 4,
   },
   neutralMouth: {
-    backgroundColor: COLORS.white,
-    marginTop: 4,
   },
   concernedMouth: {
-    borderColor: COLORS.white,
-    borderBottomWidth: 0,
     backgroundColor: 'transparent',
-    marginTop: 4,
   },
-  shine: {
+  shardsContainer: {
     position: 'absolute',
-    backgroundColor: COLORS.white,
-    opacity: 0.3,
-  },
-  haloRing: {
-    position: 'absolute',
-  },
-  sparkle: {
-    position: 'absolute',
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sparkleH: {
+  shard: {
     position: 'absolute',
-    width: '100%',
-    height: '20%',
-    borderRadius: 100,
-  },
-  sparkleV: {
-    position: 'absolute',
-    width: '20%',
-    height: '100%',
-    borderRadius: 100,
+    borderRadius: 2,
+    shadowColor: '#fff',
+    shadowRadius: 4,
+    shadowOpacity: 0.5,
   },
 });

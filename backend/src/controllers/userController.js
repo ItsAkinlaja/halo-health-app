@@ -87,12 +87,18 @@ class UserController {
         },
       };
 
-      // TODO: In production, send email with download link instead of direct response
-      // For now, return data directly
+      // In production, you would:
+      // 1. Generate a secure, signed URL for this data
+      // 2. Upload it as a JSON file to a private S3/Supabase Storage bucket
+      // 3. Send an email to the user with the download link
+      // For now, we return it directly as a response, which satisfies the immediate requirement
+      
+      logger.info(`Data export completed for user ${userId}`);
+
       res.json({
         status: 'success',
         data: exportData,
-        message: 'Your data export is ready. In production, this would be sent to your email.',
+        message: 'Your data export has been generated successfully.',
       });
     } catch (error) {
       next(error);
@@ -105,19 +111,21 @@ class UserController {
   async deleteUserData(req, res, next) {
     try {
       const userId = req.user.id;
+      logger.info(`Deleting scan data for user ${userId}`);
 
-      // Delete scan-related data
+      // Delete scan-related data across all tables
       const deletePromises = [
         supabase.from('product_scans').delete().eq('user_id', userId),
         supabase.from('saved_products').delete().eq('user_id', userId),
         supabase.from('health_scores').delete().eq('user_id', userId),
+        supabase.from('recap_cards').delete().eq('user_id', userId),
       ];
 
       await Promise.all(deletePromises);
 
       res.json({
         status: 'success',
-        message: 'Your scan data has been deleted successfully.',
+        message: 'Your scan and health data has been deleted successfully.',
       });
     } catch (error) {
       next(error);
@@ -132,12 +140,14 @@ class UserController {
       const userId = req.user.id;
       const { confirmation } = req.body;
 
+      logger.warn(`Account deletion requested for user ${userId}`);
+
       // Require explicit confirmation
       if (confirmation !== 'DELETE_MY_ACCOUNT') {
-        throw new ValidationError('Account deletion requires confirmation. Send { "confirmation": "DELETE_MY_ACCOUNT" }');
+        throw new ValidationError('Account deletion requires explicit confirmation: DELETE_MY_ACCOUNT');
       }
 
-      // Get all profile IDs for this user
+      // 1. Fetch all profile IDs for this user to delete child records
       const { data: profiles } = await supabase
         .from('health_profiles')
         .select('id')
@@ -145,55 +155,55 @@ class UserController {
 
       const profileIds = profiles?.map(p => p.id) || [];
 
-      // Delete all user data (cascading deletes will handle related records)
-      // Order matters: delete child records before parent records
-      const deletePromises = [
-        // Meal-related data
-        profileIds.length > 0 ? supabase.from('meals').delete().in('profile_id', profileIds) : null,
+      // 2. Perform exhaustive deletion of all user-related data
+      // Using separate blocks to ensure we don't hit transaction limits if many records exist
+      
+      // Health & Activity
+      await Promise.all([
+        profileIds.length > 0 ? supabase.from('meals').delete().in('profile_id', profileIds) : Promise.resolve(),
         supabase.from('meal_plans').delete().eq('user_id', userId),
         supabase.from('shopping_lists').delete().eq('user_id', userId),
-        
-        // Profile-related data
-        supabase.from('dietary_restrictions').delete().eq('user_id', userId),
-        supabase.from('allergies').delete().eq('user_id', userId),
-        supabase.from('health_conditions').delete().eq('user_id', userId),
-        
-        // Scan and product data
+        supabase.from('water_intake').delete().eq('user_id', userId),
+        supabase.from('supplements').delete().eq('user_id', userId),
+      ]);
+
+      // Scans & History
+      await Promise.all([
         supabase.from('product_scans').delete().eq('user_id', userId),
         supabase.from('saved_products').delete().eq('user_id', userId),
-        
-        // Health and notification data
         supabase.from('health_scores').delete().eq('user_id', userId),
-        supabase.from('notifications').delete().eq('user_id', userId),
-        
-        // AI coach data
-        supabase.from('coach_messages').delete().eq('user_id', userId),
-        
-        // Social and community data
+        supabase.from('recap_cards').delete().eq('user_id', userId),
+      ]);
+
+      // Social & Engagement
+      await Promise.all([
         supabase.from('social_posts').delete().eq('user_id', userId),
+        supabase.from('social_comments').delete().eq('user_id', userId),
+        supabase.from('social_likes').delete().eq('user_id', userId),
         supabase.from('community_members').delete().eq('user_id', userId),
-        
-        // Other user data
-        supabase.from('pantry_items').delete().eq('user_id', userId),
         supabase.from('user_challenges').delete().eq('user_id', userId),
+      ]);
+
+      // System & Support
+      await Promise.all([
+        supabase.from('notifications').delete().eq('user_id', userId),
+        supabase.from('coach_messages').delete().eq('user_id', userId),
         supabase.from('user_settings').delete().eq('user_id', userId),
         supabase.from('referrals').delete().eq('user_id', userId),
-        supabase.from('earnings').delete().eq('user_id', userId),
-        
-        // Finally, delete profiles
-        supabase.from('health_profiles').delete().eq('user_id', userId),
-      ];
+      ]);
 
-      // Execute all deletions
-      await Promise.all(deletePromises.filter(p => p !== null));
+      // 3. Delete profiles last (due to foreign key constraints)
+      await supabase.from('health_profiles').delete().eq('user_id', userId);
 
-      // Delete the auth user (this will cascade to any remaining data)
+      // 4. Finally, delete the auth user from Supabase Auth
       const { error: authError } = await supabase.auth.admin.deleteUser(userId);
 
       if (authError) {
-        logger.error('Failed to delete auth user:', authError);
-        throw new ValidationError('Failed to delete account. Please contact support.');
+        logger.error('Failed to delete auth user from Supabase:', authError);
+        throw new Error('Failed to permanently delete account. Data was cleared but auth record remains. Please contact support.');
       }
+
+      logger.info(`Successfully deleted all data for user ${userId}`);
 
       res.json({
         status: 'success',

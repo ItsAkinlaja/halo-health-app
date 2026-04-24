@@ -13,12 +13,15 @@ export default function AlternativesList({ productId, profileId, onSelectAlterna
   }, [productId, profileId]);
 
   const loadAlternatives = async () => {
+    if (!productId) return;
+    
     try {
       setLoading(true);
       const data = await alternativesService.getAlternatives(productId, profileId);
-      setAlternatives(data);
+      setAlternatives(data || []);
     } catch (error) {
       console.error('Error loading alternatives:', error);
+      setAlternatives([]);
     } finally {
       setLoading(false);
     }
@@ -53,27 +56,24 @@ export default function AlternativesList({ productId, profileId, onSelectAlterna
           <View style={styles.header}>
             <View style={styles.info}>
               <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.brand}>{item.brand}</Text>
+              <Text style={styles.brand}>{item.brand || 'Unknown Brand'}</Text>
             </View>
-            <View style={[styles.score, { backgroundColor: getScoreColor(item.health_score) }]}>
-              <Text style={styles.scoreText}>{item.health_score}</Text>
+            <View style={[styles.score, { backgroundColor: getScoreColor(item.personalized_score || item.health_score || 50) }]}>
+              <Text style={styles.scoreText}>{Math.round(item.personalized_score || item.health_score || 50)}</Text>
             </View>
           </View>
 
-          {item.recommendation && (
-            <View style={styles.recommendation}>
-              <Ionicons name="checkmark-circle" size={16} color={COLORS.success} />
-              <Text style={styles.reason}>{item.recommendation.reason}</Text>
+          {item.score_improvement && (
+            <View style={styles.improvement}>
+              <Ionicons name="trending-up" size={14} color={COLORS.success} />
+              <Text style={styles.improvementText}>+{Math.round(item.score_improvement)} points better</Text>
             </View>
           )}
 
-          {item.recommendation?.keyBenefits && (
-            <View style={styles.benefits}>
-              {item.recommendation.keyBenefits.map((benefit, idx) => (
-                <View key={idx} style={styles.benefit}>
-                  <Text style={styles.benefitText}>• {benefit}</Text>
-                </View>
-              ))}
+          {item.reason && (
+            <View style={styles.recommendation}>
+              <Ionicons name="checkmark-circle" size={16} color={COLORS.success} />
+              <Text style={styles.reasonText}>{item.reason}</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -149,21 +149,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: SPACING.xs,
-    marginBottom: SPACING.xs,
-  },
-  reason: {
-    flex: 1,
-    fontSize: TYPOGRAPHY.sm,
-    color: COLORS.textPrimary,
-  },
-  benefits: {
     marginTop: SPACING.xs,
   },
-  benefit: {
-    marginBottom: 2,
-  },
-  benefitText: {
+  reasonText: {
+    flex: 1,
     fontSize: TYPOGRAPHY.sm,
     color: COLORS.textSecondary,
+    lineHeight: 18,
   },
+  improvement: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: SPACING.xs,
+  },
+  improvementText: {
+    fontSize: TYPOGRAPHY.sm,
+    color: COLORS.success,
+    fontWeight: '600',
+  },
+
 });

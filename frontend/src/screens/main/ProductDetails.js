@@ -63,8 +63,44 @@ export default function ProductDetails({ route, navigation }) {
         return;
       }
 
-      setProduct(data);
-      setSaved(data.is_saved || false);
+      // Normalize product data structure
+      const normalizedProduct = {
+        id: data.id,
+        barcode: data.barcode,
+        name: data.name || 'Unknown Product',
+        brand: data.brand || 'Unknown Brand',
+        category: data.category || 'Product',
+        image_url: data.image_url,
+        health_score: data.score_data?.overall_score || data.health_score || 50,
+        score_data: data.score_data,
+        processing_level: data.processing_level,
+        allergens: data.allergens_present || [],
+        ingredients: (data.ingredients || []).map(ing => 
+          typeof ing === 'string' ? { name: ing, status: 'can_eat', note: '' } : ing
+        ),
+        nutrition_facts: data.nutrition_info ? {
+          calories: data.nutrition_info.energy_kcal,
+          protein: data.nutrition_info.proteins,
+          carbs: data.nutrition_info.carbohydrates,
+          fat: data.nutrition_info.fat,
+          fiber: data.nutrition_info.fiber,
+          sugar: data.nutrition_info.sugars,
+          sodium: data.nutrition_info.sodium,
+        } : null,
+        toxins: (data.toxins_detected || []).map(toxin => ({
+          name: toxin,
+          level: 'Detected',
+          limit: 'Should be avoided',
+          risk: 'Medium',
+          detail: 'This ingredient may have negative health effects.',
+        })),
+        ai_analysis: data.halo_analysis || data.score_data?.recommendations?.join(' ') || 'Product analysis in progress.',
+        manufacturer: data.brand,
+        is_saved: data.is_saved || false,
+      };
+
+      setProduct(normalizedProduct);
+      setSaved(normalizedProduct.is_saved);
     } catch (error) {
       console.warn('Failed to load product:', error.message);
       Alert.alert('Error', 'Failed to load product details');

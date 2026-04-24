@@ -11,21 +11,27 @@ class AIService {
   async generateProductAnalysis(product, profile) {
     const startTime = Date.now();
     try {
+      // Check if OpenAI API key is configured
+      if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY.includes('your_')) {
+        logger.warn('OpenAI API key not configured, returning default analysis');
+        return this.generateDefaultAnalysis(product, profile);
+      }
+
       const prompt = this.buildProductAnalysisPrompt(product, profile);
       
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4',
+        model: 'gpt-4o-mini', // Using mini for cost efficiency
         messages: [
           {
             role: 'system',
-            content: 'You are Halo, an intelligent health and nutrition assistant. Provide helpful, personalized analysis of products based on user health profiles. Be encouraging but honest about health impacts.'
+            content: 'You are Halo, an intelligent health and nutrition assistant. Provide helpful, personalized analysis of products based on user health profiles. Be encouraging but honest about health impacts. Keep responses concise (2-3 sentences) and actionable.'
           },
           {
             role: 'user',
             content: prompt
           }
         ],
-        max_tokens: 500,
+        max_tokens: 300,
         temperature: 0.7,
       });
 
@@ -37,7 +43,9 @@ class AIService {
       const duration = Date.now() - startTime;
       logAICall('OpenAI', 'product_analysis', duration, null, error);
       logger.error('Error generating product analysis:', error);
-      throw error;
+      
+      // Return default analysis on error
+      return this.generateDefaultAnalysis(product, profile);
     }
   }
 
@@ -124,32 +132,33 @@ class AIService {
   }
 
   buildProductAnalysisPrompt(product, profile) {
+    const scoreData = product.score_data || {};
+    const warnings = scoreData.warnings || [];
+    const recommendations = scoreData.recommendations || [];
+
     return `Analyze this product for a user with the following health profile:
 
 Product Information:
 - Name: ${product.name}
-- Brand: ${product.brand}
-- Category: ${product.category}
-- Ingredients: ${product.ingredients ? product.ingredients.join(', ') : 'Not available'}
-- Health Score: ${product.health_score || 'Not available'}
-- Processing Level: ${product.processing_level || 'Not available'}
+- Brand: ${product.brand || 'Unknown'}
+- Category: ${product.category || 'Unknown'}
+- Health Score: ${scoreData.overall_score || product.health_score || 'N/A'}/100
+- Processing Level: ${product.processing_level || 'Unknown'}
+- Ingredients: ${product.ingredients && product.ingredients.length > 0 ? product.ingredients.slice(0, 5).join(', ') + (product.ingredients.length > 5 ? '...' : '') : 'Not available'}
+${product.toxins_detected && product.toxins_detected.length > 0 ? `- Toxins Detected: ${product.toxins_detected.join(', ')}` : ''}
+${product.allergens_present && product.allergens_present.length > 0 ? `- Allergens: ${product.allergens_present.join(', ')}` : ''}
 
 User Health Profile:
-- Name: ${profile.name}
-- Age Group: ${profile.age_group}
-- Gender: ${profile.gender}
-- Health Goals: ${profile.health_goals ? profile.health_goals.join(', ') : 'Not specified'}
-- Dietary Restrictions: ${profile.dietary_restrictions ? profile.dietary_restrictions.join(', ') : 'None'}
-- Allergies: ${profile.allergies_intolerances ? profile.allergies_intolerances.join(', ') : 'None'}
-- Health Concerns: ${profile.health_concerns ? profile.health_concerns.join(', ') : 'None'}
+- Health Goals: ${profile.health_goals && profile.health_goals.length > 0 ? profile.health_goals.join(', ') : 'General health'}
+- Dietary Restrictions: ${profile.dietary_restrictions && profile.dietary_restrictions.length > 0 ? profile.dietary_restrictions.join(', ') : 'None'}
+- Allergies: ${profile.allergies_intolerances && profile.allergies_intolerances.length > 0 ? profile.allergies_intolerances.join(', ') : 'None'}
 
-Please provide:
-1. Personalized health assessment
-2. Potential benefits or risks
-3. Recommendations for this user
-4. Alternative suggestions if needed
+Provide a brief, personalized analysis (2-3 sentences) that:
+1. Assesses if this product aligns with their health goals
+2. Highlights any concerns or benefits
+3. Gives actionable advice
 
-Keep it concise, encouraging, and actionable.`;
+Be encouraging but honest.`;
   }
 
   buildOCRParsingPrompt(ocrText) {
@@ -220,6 +229,45 @@ Please return a JSON object with:
 }
 
 Include 3 meals per day (breakfast, lunch, dinner) and optionally 1 snack. Focus on whole foods and balanced nutrition.`;
+  }
+
+  generateDefaultAnalysis(product, profile) {
+    const score = product.score_data?.overall_score || product.health_score || 50;
+    const warnings = product.score_data?.warnings || [];
+    const recommendations = product.score_data?.recommendations || [];
+
+    let analysis = '';
+
+    // Score-based assessment
+    if (score >= 80) {
+      analysis = `This is an excellent choice! With a health score of ${score}/100, this product aligns well with your health goals. `;
+    } else if (score >= 60) {
+      analysis = `This is a decent option with a health score of ${score}/100. It has some good qualities but could be improved. `;
+    } else if (score >= 40) {
+      analysis = `This product has a moderate health score of ${score}/100. Consider consuming in moderation. `;
+    } else {
+      analysis = `This product has a low health score of ${score}/100. You might want to look for healthier alternatives. `;
+    }
+
+    // Add warnings
+    if (warnings.length > 0) {
+      const allergenWarnings = warnings.filter(w => w.type === 'allergen');
+      const dietaryWarnings = warnings.filter(w => w.type === 'dietary');
+      
+      if (allergenWarnings.length > 0) {
+        analysis += `⚠️ Contains allergens that may affect you. `;
+      }
+      if (dietaryWarnings.length > 0) {
+        analysis += `This product may not align with your dietary restrictions. `;
+      }
+    }
+
+    // Add recommendations
+    if (recommendations.length > 0) {
+      analysis += recommendations[0];
+    }
+
+    return analysis || 'Product analysis is being processed. Check back soon for detailed insights.';
   }
 }
 

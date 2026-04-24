@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, StatusBar, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -6,13 +6,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/common/Button';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../styles/theme';
 import { useTranslation } from '../../hooks/useTranslation';
+import storage, { STORAGE_KEYS } from '../../utils/storage';
 
 export default function Welcome({ navigation }) {
   const { t } = useTranslation();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
+  const [hasVisited, setHasVisited] = useState(false);
 
   useEffect(() => {
+    checkVisitStatus();
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -26,6 +29,21 @@ export default function Welcome({ navigation }) {
       }),
     ]).start();
   }, []);
+
+  const checkVisitStatus = async () => {
+    const onboardingCompleted = await storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
+    if (onboardingCompleted) {
+      setHasVisited(true);
+    }
+  };
+
+  const handleContinue = () => {
+    if (hasVisited) {
+      navigation.navigate('Login');
+    } else {
+      navigation.navigate('LanguageSelection');
+    }
+  };
 
   return (
     <View style={styles.root}>
@@ -95,7 +113,7 @@ export default function Welcome({ navigation }) {
           >
             <TouchableOpacity
               style={styles.continueButton}
-              onPress={() => navigation.navigate('LanguageSelection')}
+              onPress={handleContinue}
               activeOpacity={0.9}
             >
               <Text style={styles.continueButtonText}>{t('welcome.continue')}</Text>

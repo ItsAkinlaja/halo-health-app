@@ -5,12 +5,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppContext } from '../../context/AppContext';
 import { ScoreRing } from '../../components/common/ScoreRing';
 import { Card } from '../../components/common/Card';
 import { scanService } from '../../services/scanService';
+import { profileService } from '../../services/profileService';
 import { notificationService } from '../../services/notificationService';
+import storage, { STORAGE_KEYS } from '../../utils/storage';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, getScoreColor } from '../../styles/theme';
 
 const { width: W } = Dimensions.get('window');
@@ -45,16 +46,47 @@ export default function HomeDashboard({ navigation }) {
   const scrollY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Auto-set user as active profile if none selected
-    if (!activeProfile && user) {
-      setActiveProfile({ id: user.id, name: user.user_metadata?.name || user.email?.split('@')[0] || 'Me' });
-    }
+    loadProfiles();
   }, [user]);
 
   useEffect(() => {
     loadDashboardData();
     checkDisclaimerStatus();
   }, [activeProfile]);
+
+  const loadProfiles = async () => {
+    if (!user?.id) return;
+
+    try {
+      const response = await profileService.getProfiles(user.id);
+      if (response.status === 'success' && response.data) {
+        setProfiles(response.data);
+        
+        // Load saved active profile ID
+        const savedProfileId = await storage.getItem(STORAGE_KEYS.ACTIVE_PROFILE_ID);
+        
+        if (savedProfileId) {
+          const savedProfile = response.data.find(p => p.id === savedProfileId);
+          if (savedProfile) {
+            setActiveProfile(savedProfile);
+            return;
+          }
+        }
+        
+        // Default to primary profile
+        const primaryProfile = response.data.find(p => p.is_primary);
+        if (primaryProfile) {
+          setActiveProfile(primaryProfile);
+          await storage.setItem(STORAGE_KEYS.ACTIVE_PROFILE_ID, primaryProfile.id);
+        } else if (response.data.length > 0) {
+          setActiveProfile(response.data[0]);
+          await storage.setItem(STORAGE_KEYS.ACTIVE_PROFILE_ID, response.data[0].id);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load profiles:', error.message);
+    }
+  };
 
   const loadDashboardData = async () => {
     if (!activeProfile?.id) {
@@ -97,7 +129,7 @@ export default function HomeDashboard({ navigation }) {
 
   const checkDisclaimerStatus = async () => {
     try {
-      const disclaimerAccepted = await AsyncStorage.getItem('medicalDisclaimerAccepted');
+      const disclaimerAccepted = await storage.getItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED);
       setShowDisclaimerBanner(!disclaimerAccepted);
     } catch (error) {
       console.warn('Failed to check disclaimer status:', error);
@@ -214,14 +246,17 @@ export default function HomeDashboard({ navigation }) {
             style={styles.profileRow}
             contentContainerStyle={styles.profileRowContent}
           >
-            {[{ id: 'self', name: 'Me' }, ...profiles].map((p) => (
+            {profiles.map((p) => (
               <TouchableOpacity
                 key={p.id}
                 style={[
                   styles.profileChip,
                   activeProfile?.id === p.id && styles.profileChipActive,
                 ]}
-                onPress={() => setActiveProfile(p)}
+                onPress={async () => {
+                  setActiveProfile(p);
+                  await storage.setItem(STORAGE_KEYS.ACTIVE_PROFILE_ID, p.id);
+                }}
               >
                 <View style={[
                   styles.profileDot,
@@ -237,6 +272,13 @@ export default function HomeDashboard({ navigation }) {
                 </Text>
               </TouchableOpacity>
             ))}
+            <TouchableOpacity
+              style={styles.profileAddChip}
+              onPress={() => navigation.navigate('FamilyProfiles')}
+            >
+              <Ionicons name="add-circle-outline" size={16} color={COLORS.primary} />
+              <Text style={styles.profileAddText}>Add Profile</Text>
+            </TouchableOpacity>
           </ScrollView>
         )}
 
@@ -578,6 +620,23 @@ const styles = StyleSheet.create({
   },
   profileNameActive: {
     color: COLORS.primary,
+  },
+  profileAddChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.primaryLight,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderStyle: 'dashed',
+    gap: SPACING.xs,
+  },
+  profileAddText: {
+    fontSize: TYPOGRAPHY.sm,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
 
   heroCard: { marginBottom: SPACING.base, padding: SPACING.lg },

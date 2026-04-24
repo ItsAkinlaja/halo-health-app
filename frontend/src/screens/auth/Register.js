@@ -13,8 +13,6 @@ import storage, { STORAGE_KEYS } from '../../utils/storage';
 
 export default function Register({ navigation }) {
   const [email, setEmail] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [haloHealthId, setHaloHealthId] = useState('');
@@ -37,7 +35,8 @@ export default function Register({ navigation }) {
 
     setIsCheckingId(true);
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/check-halo-id?haloHealthId=${id}`);
+      const baseUrl = process.env.EXPO_PUBLIC_API_URL || (Platform.OS === 'android' ? 'http://172.20.10.3:3001' : 'http://172.20.10.3:3001');
+      const response = await fetch(`${baseUrl}/api/auth/check-halo-id?haloHealthId=${id}`);
       const data = await response.json();
       
       if (data.available) {
@@ -73,7 +72,7 @@ export default function Register({ navigation }) {
   const handleRegister = async () => {
     setError(null);
 
-    if (!email || !firstName || !lastName || !password || !confirmPassword || !haloHealthId) {
+    if (!email || !password || !confirmPassword || !haloHealthId) {
       setError('Please fill in all required fields');
       return;
     }
@@ -105,9 +104,6 @@ export default function Register({ navigation }) {
       
       await signUp(email, password, {
         halo_health_id: haloHealthId,
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        full_name: `${firstName.trim()} ${lastName.trim()}`,
         onboarding_data: onboardingData, // Include onboarding data in user metadata
       });
       
@@ -170,65 +166,7 @@ export default function Register({ navigation }) {
                 </View>
               )}
 
-              {/* First Name Input */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>First Name *</Text>
-                <View style={[
-                  styles.inputWrap,
-                  focusedField === 'firstName' && styles.inputWrapFocused,
-                ]}>
-                  <Ionicons
-                    name="person-outline"
-                    size={18}
-                    color={focusedField === 'firstName' ? COLORS.primary : COLORS.textTertiary}
-                    style={styles.inputIcon}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    value={firstName}
-                    onChangeText={(text) => {
-                      setFirstName(text);
-                      setError(null);
-                    }}
-                    placeholder="John"
-                    placeholderTextColor={COLORS.textTertiary}
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                    onFocus={() => setFocusedField('firstName')}
-                    onBlur={() => setFocusedField(null)}
-                  />
-                </View>
-              </View>
 
-              {/* Last Name Input */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Last Name *</Text>
-                <View style={[
-                  styles.inputWrap,
-                  focusedField === 'lastName' && styles.inputWrapFocused,
-                ]}>
-                  <Ionicons
-                    name="person-outline"
-                    size={18}
-                    color={focusedField === 'lastName' ? COLORS.primary : COLORS.textTertiary}
-                    style={styles.inputIcon}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    value={lastName}
-                    onChangeText={(text) => {
-                      setLastName(text);
-                      setError(null);
-                    }}
-                    placeholder="Doe"
-                    placeholderTextColor={COLORS.textTertiary}
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                    onFocus={() => setFocusedField('lastName')}
-                    onBlur={() => setFocusedField(null)}
-                  />
-                </View>
-              </View>
 
               {/* Email Input */}
               <View style={styles.inputGroup}>

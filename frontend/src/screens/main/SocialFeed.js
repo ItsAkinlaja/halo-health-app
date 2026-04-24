@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity,
   StatusBar, ActivityIndicator, RefreshControl, Alert,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,18 +14,18 @@ import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../styles/theme
 
 const TABS = ['Discover', 'Following'];
 
-function Avatar({ initials, color, size = 40 }) {
-  return (
-    <View style={[
-      styles.avatar,
-      { width: size, height: size, borderRadius: size / 2, backgroundColor: color },
-    ]}>
-      <Text style={[styles.avatarText, { fontSize: size * 0.35 }]}>{initials}</Text>
-    </View>
-  );
-}
+// Memoized Avatar component for better performance in lists
+const Avatar = React.memo(({ initials, color, size = 40 }) => (
+  <View style={[
+    styles.avatar,
+    { width: size, height: size, borderRadius: size / 2, backgroundColor: color },
+  ]}>
+    <Text style={[styles.avatarText, { fontSize: size * 0.35 }]}>{initials}</Text>
+  </View>
+));
 
-function PostCard({ post, onLike, onSave, onComment }) {
+// Memoized PostCard for optimized list rendering
+const PostCard = React.memo(({ post, onLike, onSave, onComment }) => {
   const scoreColor = post.score >= 60 ? COLORS.scoreExcellent : COLORS.scoreAvoid;
   const author = post.author || {};
   const initials = author.name ? author.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'U';
@@ -103,7 +104,7 @@ function PostCard({ post, onLike, onSave, onComment }) {
       </View>
     </HaloCard>
   );
-}
+});
 
 export default function SocialFeed({ navigation }) {
   const { user } = useAppContext();
@@ -111,24 +112,49 @@ export default function SocialFeed({ navigation }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const PAGE_SIZE = 10;
 
-  useEffect(() => {
-    loadPosts();
-  }, [activeTab]);
+  const loadPosts = useCallback(async (isInitial = true) => {
+    if (!isInitial && (!hasMore || loadingMore)) return;
 
-  const loadPosts = async () => {
     try {
-      setLoading(true);
+      if (isInitial) {
+        setLoading(true);
+        setOffset(0);
+      } else {
+        setLoadingMore(true);
+      }
+
       const filter = activeTab === 'Following' ? 'following' : 'all';
-      const response = await socialService.getFeed(filter, 20, 0);
-      setPosts(response.posts || []);
+      const currentOffset = isInitial ? 0 : offset;
+      
+      const response = await socialService.getFeed(filter, PAGE_SIZE, currentOffset);
+      const newPosts = response.posts || [];
+      
+      if (isInitial) {
+        setPosts(newPosts);
+      } else {
+        setPosts(prev => [...prev, ...newPosts]);
+      }
+      
+      setHasMore(newPosts.length === PAGE_SIZE);
+      setOffset(currentOffset + PAGE_SIZE);
     } catch (error) {
       console.error('Failed to load posts:', error);
-      Alert.alert('Error', 'Failed to load community posts');
+      if (isInitial) Alert.alert('Error', 'Failed to load community posts');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
     }
-  };
+  }, [activeTab, offset, hasMore, loadingMore]);
+
+  useEffect(() => {
+    loadPosts(true);
+  }, [activeTab]);
 
   const handleLike = useCallback(async (postId) => {
     const post = posts.find(p => p.id === postId);
@@ -163,20 +189,20 @@ export default function SocialFeed({ navigation }) {
   }, []);
 
   const handleComment = useCallback((postId) => {
-    // Navigate to post detail with comments
-    console.log('Open comments for post:', postId);
-  }, []);
+    navigation.navigate('PostDetails', { postId });
+  }, [navigation]);
 
-  const onRefresh = useCallback(async () => {
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
-    await loadPosts();
-    setRefreshing(false);
-  }, [activeTab]);
+    loadPosts(true);
+  }, [loadPosts]);
 
-  return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <StatusBar barStyle="dark-content" />
+  const onEndReached = useCallback(() => {
+    loadPosts(false);
+  }, [loadPosts]);
 
+  const renderHeader = () => (
+    <>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Community</Text>
         <View style={styles.headerRight}>
@@ -200,47 +226,71 @@ export default function SocialFeed({ navigation }) {
           </TouchableOpacity>
         ))}
       </View>
+    </>
+  );
 
-      {loading ? (
+  const renderFooter = () => {
+    if (!loadingMore) return <View style={{ height: SPACING.xxxl }} />;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={COLORS.primary} />
+      </View>
+    );
+  };
+
+  const renderEmpty = () => {
+    if (loading) return null;
+    return (
+      <View style={styles.emptyContainer}>
+        <Ionicons name="people-outline" size={64} color={COLORS.textTertiary} />
+        <Text style={styles.emptyTitle}>No posts yet</Text>
+        <Text style={styles.emptyText}>
+          {activeTab === 'Following' 
+            ? 'Follow users to see their posts here'
+            : 'Be the first to share with the community'
+          }
+        </Text>
+      </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <StatusBar barStyle="dark-content" />
+
+      {loading && !refreshing && posts.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
         </View>
       ) : (
-        <ScrollView
-          style={styles.scroll}
-          showsVerticalScrollIndicator={false}
+        <FlatList
+          data={posts}
+          keyExtractor={item => item.id.toString()}
+          renderItem={({ item }) => (
+            <PostCard 
+              post={item} 
+              onLike={handleLike} 
+              onSave={handleSave}
+              onComment={handleComment}
+            />
+          )}
+          ListHeaderComponent={renderHeader}
+          ListFooterComponent={renderFooter}
+          ListEmptyComponent={renderEmpty}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
           }
-        >
-          {posts.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="people-outline" size={64} color={COLORS.textTertiary} />
-              <Text style={styles.emptyTitle}>No posts yet</Text>
-              <Text style={styles.emptyText}>
-                {activeTab === 'Following' 
-                  ? 'Follow users to see their posts here'
-                  : 'Be the first to share with the community'
-                }
-              </Text>
-            </View>
-          ) : (
-            posts.map(post => (
-              <PostCard 
-                key={post.id} 
-                post={post} 
-                onLike={handleLike} 
-                onSave={handleSave}
-                onComment={handleComment}
-              />
-            ))
-          )}
-
-          <View style={{ height: SPACING.xxxl }} />
-        </ScrollView>
+          onEndReached={onEndReached}
+          onEndReachedThreshold={0.5}
+          showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
+          initialNumToRender={5}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+        />
       )}
 
-      <TouchableOpacity style={styles.fab}>
+      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('CreatePost')}>
         <Ionicons name="add" size={26} color={COLORS.white} />
       </TouchableOpacity>
     </SafeAreaView>
@@ -271,6 +321,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
     marginHorizontal: SPACING.base,
+    marginBottom: SPACING.md,
   },
   tab: {
     flex: 1, paddingVertical: SPACING.md,
@@ -281,12 +332,14 @@ const styles = StyleSheet.create({
   tabText: { fontSize: TYPOGRAPHY.base, color: COLORS.textSecondary, fontWeight: '600' },
   tabTextActive: { color: COLORS.primary },
 
-  scroll: { flex: 1 },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: SPACING.xxxl,
+  },
+  footerLoader: {
+    paddingVertical: SPACING.lg,
+    alignItems: 'center',
   },
   emptyContainer: {
     alignItems: 'center',

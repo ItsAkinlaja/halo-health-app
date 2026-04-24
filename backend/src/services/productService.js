@@ -1,10 +1,13 @@
 const { supabase } = require('../utils/database');
 const { NotFoundError, ValidationError } = require('../middleware/errorHandler');
 const { logger } = require('../utils/logger');
+const openFoodFactsService = require('./openFoodFactsService');
+const productHealthScoreService = require('./productHealthScoreService');
 
 class ProductService {
-  async getProductByBarcode(barcode) {
+  async getProductByBarcode(barcode, profileId = null) {
     try {
+      // First, check local database
       const { data: product, error } = await supabase
         .from('products')
         .select('*')
@@ -12,14 +15,28 @@ class ProductService {
         .eq('is_active', true)
         .single();
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          return null; // Product not found
-        }
-        throw new ValidationError(error.message);
+      if (!error && product) {
+        // Calculate personalized score
+        const scoreData = await productHealthScoreService.calculateProductScore(product, profileId);
+        return { ...product, score_data: scoreData };
       }
 
-      return product;
+      // If not found locally, fetch from Open Food Facts
+      logger.info(`Product ${barcode} not in database, fetching from Open Food Facts`);
+      const offProduct = await openFoodFactsService.getProductByBarcode(barcode);
+      
+      if (!offProduct) {
+        return null; // Product not found anywhere
+      }
+
+      // Calculate health score
+      const scoreData = await productHealthScoreService.calculateProductScore(offProduct, profileId);
+      offProduct.health_score = scoreData.overall_score;
+
+      // Save to database
+      const savedProduct = await this.createProduct(offProduct);
+      
+      return { ...savedProduct, score_data: scoreData };
     } catch (error) {
       logger.error('Error getting product by barcode:', error);
       throw error;
@@ -124,7 +141,8 @@ class ProductService {
 
   async searchProducts(query, limit = 20, offset = 0) {
     try {
-      const { data: products, error } = await supabase
+      // Search local database first
+      const { data: localProducts, error } = await supabase
         .from('products')
         .select('*')
         .or(`name.ilike.%${query}%,brand.ilike.%${query}%`)
@@ -133,10 +151,22 @@ class ProductService {
         .range(offset, offset + limit - 1);
 
       if (error) {
-        throw new ValidationError(error.message);
+        logger.warn('Error searching local products:', error.message);
       }
 
-      return products;
+      // If we have enough results, return them
+      if (localProducts && localProducts.length >= limit) {
+        return localProducts;
+      }
+
+      // Otherwise, also search Open Food Facts
+      const offProducts = await openFoodFactsService.searchProducts(query, limit);
+      
+      // Combine results, prioritizing local products
+      const combined = [...(localProducts || []), ...offProducts];
+      const unique = Array.from(new Map(combined.map(p => [p.barcode, p])).values());
+      
+      return unique.slice(0, limit);
     } catch (error) {
       logger.error('Error searching products:', error);
       throw error;

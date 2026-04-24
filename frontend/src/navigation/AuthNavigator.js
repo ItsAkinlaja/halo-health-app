@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Welcome from '../screens/auth/Welcome';
 import LanguageSelection from '../screens/auth/LanguageSelection';
@@ -121,9 +121,9 @@ const OnboardingStep8Wrapper = ({ navigation }) => {
   return <OnboardingStep8 navigation={navigation} nextStep={handleComplete} />;
 };
 
-function AuthStack() {
+function AuthStack({ initialRoute }) {
   return (
-    <Stack.Navigator initialRouteName="Welcome" screenOptions={{ headerShown: false }}>
+    <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Welcome" component={Welcome} />
       <Stack.Screen name="LanguageSelection" component={LanguageSelection} />
       <Stack.Screen name="OnboardingPreview" component={OnboardingPreview} />
@@ -147,9 +147,21 @@ function AuthStack() {
 }
 
 export default function AuthNavigator() {
+  const [initialRoute, setInitialRoute] = useState(null);
+
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      const completed = await storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
+      setInitialRoute(completed ? 'Login' : 'Welcome');
+    };
+    checkOnboarding();
+  }, []);
+
+  if (!initialRoute) return null;
+
   return (
     <OnboardingProvider>
-      <AuthStack />
+      <AuthStack initialRoute={initialRoute} />
     </OnboardingProvider>
   );
 }

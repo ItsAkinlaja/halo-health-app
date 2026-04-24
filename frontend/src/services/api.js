@@ -1,7 +1,11 @@
 import { supabase } from './supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 
+  (Platform.OS === 'android' ? 'http://172.20.10.3:3001' : 'http://172.20.10.3:3001'); 
+// Using local IP 172.20.10.3 for hotspot connectivity
+const REQUEST_TIMEOUT = 15000; // 15 seconds
 
 class ApiClient {
   constructor() {
@@ -23,6 +27,7 @@ class ApiClient {
   async request(endpoint, options = {}) {
     const token = await this.getAuthToken();
     const headers = {
+      'Accept': 'application/json',
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),
       ...options.headers,
@@ -38,24 +43,56 @@ class ApiClient {
       delete config.headers['Content-Type'];
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    config.signal = controller.signal;
+
     try {
       const response = await fetch(`${this.baseURL}${endpoint}`, config);
+      clearTimeout(timeoutId);
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || errorData.error || `Request failed with status ${response.status}`);
+      let responseData;
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        responseData = await response.json();
+      } else {
+        responseData = { message: await response.text() };
       }
 
-      return await response.json();
+      if (!response.ok) {
+        // Handle specific status codes
+        if (response.status === 401) {
+          // Optional: handle logout or token refresh
+        }
+        
+        const error = new Error(responseData.message || responseData.error || `Request failed with status ${response.status}`);
+        error.status = response.status;
+        error.data = responseData;
+        throw error;
+      }
+
+      return responseData;
     } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (error.name === 'AbortError') {
+        throw new Error('Request timed out. Please check your internet connection.');
+      }
+
       if (
         error.message === 'Network request failed' ||
         error.message === 'Failed to fetch' ||
         error.message?.includes('NetworkError') ||
         error.name === 'TypeError'
       ) {
-        throw new Error('Unable to reach server. Make sure the backend is running.');
+        const errorMsg = `Unable to reach server at ${this.baseURL}. \n\n` +
+          `1. Ensure your backend is running.\n` +
+          `2. If using a physical device, use your machine's local IP (e.g., http://192.168.1.X:3001) instead of localhost.\n` +
+          `3. Ensure both device and machine are on the same Wi-Fi.`;
+        throw new Error(errorMsg);
       }
+      
       throw error;
     }
   }

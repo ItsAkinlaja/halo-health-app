@@ -29,6 +29,15 @@ export default function AICoach({ navigation }) {
     loadHistory();
   }, []);
 
+  const getMoodFromContent = (content) => {
+    if (!content) return 'happy';
+    const lower = content.toLowerCase();
+    if (lower.includes('sorry') || lower.includes('error') || lower.includes('trouble') || lower.includes('failed')) return 'sad';
+    if (lower.includes('caution') || lower.includes('warning') || lower.includes('careful') || lower.includes('unhealthy') || lower.includes('alert')) return 'concerned';
+    if (lower.includes('great') || lower.includes('excellent') || lower.includes('perfect') || lower.includes('congratulations') || lower.includes('success')) return 'excited';
+    return 'happy';
+  };
+
   const loadHistory = async () => {
     if (!user?.id) return;
     try {
@@ -95,14 +104,19 @@ export default function AICoach({ navigation }) {
 
   const renderMessage = ({ item }) => {
     const isUser = item.role === 'user';
+    const mood = isUser ? 'happy' : getMoodFromContent(item.content);
     return (
       <View style={[styles.messageRow, isUser && styles.messageRowUser]}>
         {!isUser && (
           <View style={styles.mascotContainer}>
-            <HaloMascot mood="happy" size={32} animated={false} />
+            <HaloMascot mood={mood} size={24} animated={true} />
           </View>
         )}
-        <View style={[styles.messageBubble, isUser ? styles.messageBubbleUser : styles.messageBubbleBot]}>
+        <View style={[
+          styles.messageBubble, 
+          isUser ? styles.messageBubbleUser : styles.messageBubbleBot,
+          !isUser && styles.messageBubbleBotPremium
+        ]}>
           <Text style={[styles.messageText, isUser && styles.messageTextUser]}>{item.content}</Text>
         </View>
         {isUser && (
@@ -124,7 +138,7 @@ export default function AICoach({ navigation }) {
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <View style={styles.headerMascot}>
-            <HaloMascot mood="happy" size={36} animated={true} />
+            <HaloMascot mood={sending ? 'excited' : 'happy'} size={36} animated={true} />
           </View>
           <View>
             <Text style={styles.headerTitle}>Halo Coach</Text>
@@ -216,6 +230,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
@@ -233,11 +252,11 @@ const styles = StyleSheet.create({
   messageRow: { flexDirection: 'row', maxWidth: '85%', marginBottom: SPACING.md, alignItems: 'flex-end' },
   messageRowUser: { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
   mascotContainer: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: SPACING.sm,
+    marginRight: SPACING.xs,
     marginBottom: 4,
   },
   avatarUser: {
@@ -253,6 +272,14 @@ const styles = StyleSheet.create({
   avatarUserText: { fontSize: TYPOGRAPHY.sm, fontWeight: '700', color: COLORS.white },
   messageBubble: { flex: 1, padding: SPACING.md, borderRadius: RADIUS.lg },
   messageBubbleBot: { backgroundColor: COLORS.surface },
+  messageBubbleBotPremium: {
+    borderWidth: 1,
+    borderColor: 'rgba(0, 179, 134, 0.2)',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
   messageBubbleUser: { backgroundColor: COLORS.primary },
   messageText: { fontSize: TYPOGRAPHY.base, color: COLORS.textPrimary, lineHeight: 22 },
   messageTextUser: { color: COLORS.white },
