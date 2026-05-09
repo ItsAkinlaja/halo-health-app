@@ -1,91 +1,63 @@
 const jwt = require('jsonwebtoken');
-const fs = require('fs');
-const path = require('path');
+const { logger } = require('./logger');
 
-// Load keys from environment
-const privateKeyPath = path.resolve(__dirname, '../../keys/private_key.pem');
-const publicKeyPath = path.resolve(__dirname, '../../keys/public_key.pem');
+// Use a secret from env. No file system dependencies — works in any deployment.
+const JWT_SECRET = process.env.JWT_SECRET;
+const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || (JWT_SECRET ? JWT_SECRET + '_refresh' : null);
 
-let privateKey, publicKey;
-
-// Load keys on startup
-try {
-  privateKey = fs.readFileSync(privateKeyPath, 'utf8');
-  publicKey = fs.readFileSync(publicKeyPath, 'utf8');
-} catch (error) {
-  console.error('Error loading JWT keys:', error);
-  throw new Error('JWT keys not found. Please generate keys first.');
-}
-
-// Generate JWT token with private key
-function generateToken(payload, expiresIn = process.env.JWT_EXPIRES_IN || '7d') {
-  return jwt.sign(payload, privateKey, {
-    algorithm: process.env.JWT_ALGORITHM || 'ES256',
-    expiresIn,
-    keyid: process.env.JWT_KEY_ID,
-  });
-}
-
-// Verify JWT token with public key
-function verifyToken(token) {
-  return jwt.verify(token, publicKey, {
-    algorithms: [process.env.JWT_ALGORITHM || 'ES256'],
-  });
-}
-
-// Generate refresh token
-function generateRefreshToken(payload, expiresIn = process.env.REFRESH_TOKEN_EXPIRES_IN || '30d') {
-  return jwt.sign(
-    { ...payload, type: 'refresh' },
-    privateKey,
-    {
-      algorithm: process.env.JWT_ALGORITHM || 'ES256',
-      expiresIn,
-      keyid: process.env.JWT_KEY_ID,
-    }
+if (!JWT_SECRET) {
+  logger.warn(
+    '⚠️  JWT_SECRET is not set in environment variables. ' +
+    'Set JWT_SECRET in your Railway/production environment. ' +
+    'Using an insecure default for development only.'
   );
 }
 
-// Decode token without verification (for getting key ID)
+const SECRET = JWT_SECRET || 'halo-health-dev-secret-change-in-production';
+const REFRESH_TOKEN_SECRET = REFRESH_SECRET || 'halo-health-refresh-dev-secret-change-in-production';
+
+// Generate access token
+function generateToken(payload, expiresIn = process.env.JWT_EXPIRES_IN || '7d') {
+  return jwt.sign(payload, SECRET, {
+    algorithm: 'HS256',
+    expiresIn,
+  });
+}
+
+// Verify access token
+function verifyToken(token) {
+  return jwt.verify(token, SECRET, { algorithms: ['HS256'] });
+}
+
+// Generate refresh token (uses a different secret so it can't be used as an access token)
+function generateRefreshToken(payload, expiresIn = process.env.REFRESH_TOKEN_EXPIRES_IN || '30d') {
+  return jwt.sign(
+    { ...payload, type: 'refresh' },
+    REFRESH_TOKEN_SECRET,
+    { algorithm: 'HS256', expiresIn }
+  );
+}
+
+// Verify refresh token
+function verifyRefreshToken(token) {
+  return jwt.verify(token, REFRESH_TOKEN_SECRET, { algorithms: ['HS256'] });
+}
+
+// Decode without verification
 function decodeToken(token) {
   return jwt.decode(token, { complete: true });
 }
 
-// Get JWKS public key data
+// HS256 is symmetric — no public key to expose via JWKS
 function getJWKS() {
-  return {
-    keys: [{
-      kty: 'EC',
-      crv: 'secp256k1',
-      kid: process.env.JWT_KEY_ID,
-      use: 'sig',
-      alg: process.env.JWT_ALGORITHM || 'ES256',
-      // Extract x and y coordinates from public key
-      ...extractKeyCoordinates(publicKey),
-    }],
-  };
-}
-
-// Extract x and y coordinates from PEM public key
-function extractKeyCoordinates(pemKey) {
-  // Remove PEM headers and footers
-  const base64Key = pemKey
-    .replace('-----BEGIN PUBLIC KEY-----', '')
-    .replace('-----END PUBLIC KEY-----', '')
-    .replace(/\n/g, '');
-
-  // This is a simplified extraction - in production you'd want proper DER parsing
-  // For now, we'll return the base64 key as the x coordinate
-  return {
-    x: base64Key,
-    y: '', // Would need proper DER parsing to extract y coordinate
-  };
+  return { keys: [] };
 }
 
 module.exports = {
   generateToken,
   verifyToken,
   generateRefreshToken,
+  verifyRefreshToken,
   decodeToken,
   getJWKS,
 };
