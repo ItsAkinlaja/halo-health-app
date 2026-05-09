@@ -18,30 +18,41 @@ export default function AppNavigator() {
   const { setUser } = useAppContext();
   const [navigationKey, setNavigationKey] = React.useState(0);
   const [needsProfileSetup, setNeedsProfileSetup] = React.useState(false);
+  // Track previous route so we only remount the navigator when the destination actually changes
+  const prevRouteRef = React.useRef(null);
 
   // Sync user from AuthContext to AppContext
   useEffect(() => {
-    if (user) {
-      setUser(user);
-    }
-  }, [user]);
+    setUser(user);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Check if profile setup is needed
+  // Check if profile setup is needed (only when user changes and loading is done)
   useEffect(() => {
+    if (!user || isLoading) return;
+    let cancelled = false;
     const checkProfileSetup = async () => {
-      if (user && !isLoading) {
-        const profileSetupCompleted = await storage.getItem(STORAGE_KEYS.PROFILE_SETUP_COMPLETED);
-        setNeedsProfileSetup(!profileSetupCompleted);
-      }
+      const profileSetupCompleted = await storage.getItem(STORAGE_KEYS.PROFILE_SETUP_COMPLETED);
+      if (!cancelled) setNeedsProfileSetup(!profileSetupCompleted);
     };
     checkProfileSetup();
-  }, [user, isLoading]);
+    return () => { cancelled = true; };
+  }, [user?.id, isLoading]); // depend on user.id, not the whole object
 
+  // Only remount the navigator when the TARGET ROUTE changes — not on every loading tick
   useEffect(() => {
-    if (!isLoading) {
+    if (isLoading) return; // wait until loading is settled
+    const nextRoute = !user
+      ? 'Auth'
+      : needsDisclaimer
+      ? 'MedicalDisclaimer'
+      : needsProfileSetup
+      ? 'ProfileSetup'
+      : 'MainApp';
+    if (prevRouteRef.current !== null && prevRouteRef.current !== nextRoute) {
       setNavigationKey(prev => prev + 1);
     }
-  }, [user, isLoading, isFirstTime, needsDisclaimer, needsProfileSetup]);
+    prevRouteRef.current = nextRoute;
+  }, [user?.id, isLoading, isFirstTime, needsDisclaimer, needsProfileSetup]);
 
   if (isLoading) {
     return (
@@ -53,7 +64,6 @@ export default function AppNavigator() {
 
   const getInitialRoute = () => {
     if (!user) return 'Auth';
-    // Skip onboarding since it was done before registration
     if (needsDisclaimer) return 'MedicalDisclaimer';
     if (needsProfileSetup) return 'ProfileSetup';
     return 'MainApp';
@@ -62,8 +72,8 @@ export default function AppNavigator() {
   const initialRouteName = getInitialRoute();
 
   return (
-    <Stack.Navigator 
-      key={`nav-${navigationKey}-${initialRouteName}-${user?.id || 'no-user'}`}
+    <Stack.Navigator
+      key={`nav-${navigationKey}-${user?.id || 'guest'}`}
       initialRouteName={initialRouteName}
       screenOptions={{ headerShown: false }}
     >

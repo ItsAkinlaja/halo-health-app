@@ -90,29 +90,8 @@ export function AuthProvider({ children }) {
 
   const signIn = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      console.error('signIn error:', error);
-      throw error;
-    }
-    
-    if (data?.user) {
-      const onboardingCompleted = await storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
-      const disclaimerAccepted = await storage.getItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED);
-      
-      // Update all states in correct order
-      setIsLoading(true); // Set loading first
-      await storage.setItem(STORAGE_KEYS.USER_SESSION, data.session);
-      
-      // Set states
-      setIsFirstTime(onboardingCompleted !== true);
-      setNeedsDisclaimer(onboardingCompleted === true && disclaimerAccepted !== true);
-      setUser(data.user);
-      
-      // Small delay to ensure state updates propagate
-      await new Promise(resolve => setTimeout(resolve, 100));
-      setIsLoading(false);
-    }
-    
+    if (error) throw error;
+    // State is updated by the onAuthStateChange SIGNED_IN event — no need to set it here.
     return data;
   };
 
@@ -145,24 +124,8 @@ export function AuthProvider({ children }) {
       setIsLoading(false);
       throw error;
     }
-    
-    // After successful verification, user should be logged in
-    if (data?.session?.user) {
-      await storage.setItem(STORAGE_KEYS.USER_SESSION, data.session);
-      
-      const onboardingCompleted = await storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
-      const disclaimerAccepted = await storage.getItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED);
-      
-      setIsFirstTime(!onboardingCompleted);
-      setNeedsDisclaimer(onboardingCompleted && !disclaimerAccepted);
-      setUser(data.session.user);
-      
-      await new Promise(resolve => setTimeout(resolve, 200));
-      setIsLoading(false);
-    } else {
-      setIsLoading(false);
-    }
-    
+    // onAuthStateChange SIGNED_IN event will handle state updates.
+    // Just return the data; loading will be cleared by the listener.
     return data;
   };
 

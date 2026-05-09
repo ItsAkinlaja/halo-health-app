@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useMemo } from 'react';
 
 // Initial state
 const initialState = {
@@ -93,8 +93,8 @@ const AppContext = createContext();
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
-  // Actions
-  const actions = {
+  // Memoize actions so consumers don't re-render when the provider re-renders for unrelated reasons
+  const actions = useMemo(() => ({
     setUser: (user) => dispatch({ type: ActionTypes.SET_USER, payload: user }),
     setActiveProfile: (profile) => dispatch({ type: ActionTypes.SET_ACTIVE_PROFILE, payload: profile }),
     setProfiles: (profiles) => dispatch({ type: ActionTypes.SET_PROFILES, payload: profiles }),
@@ -107,7 +107,7 @@ export function AppProvider({ children }) {
     setLoading: (isLoading) => dispatch({ type: ActionTypes.SET_LOADING, payload: isLoading }),
     setError: (error) => dispatch({ type: ActionTypes.SET_ERROR, payload: error }),
     clearError: () => dispatch({ type: ActionTypes.CLEAR_ERROR }),
-  };
+  }), [dispatch]);
 
   const value = {
     ...state,

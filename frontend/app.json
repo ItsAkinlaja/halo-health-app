@@ -73,10 +73,5 @@
     "updates": {
       "fallbackToCacheTimeout": 0
     },
-    "extra": {
-      "eas": {
-        "projectId": "your-project-id"
-      }
-    }
   }
 }

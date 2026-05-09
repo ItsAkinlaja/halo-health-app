@@ -35,16 +35,38 @@ const app = express();
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CLIENT_URL
-    ? process.env.CLIENT_URL.split(',')
-    : ['http://localhost:8081', 'http://localhost:19006', 'http://localhost:19000'],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+
+    const allowed = process.env.CLIENT_URL
+      ? process.env.CLIENT_URL.split(',')
+      : [];
+
+    // Always allow these origins
+    const defaults = [
+      'http://localhost:8081',
+      'http://localhost:19006',
+      'http://localhost:19000',
+      'https://halo-health-app-production.up.railway.app',
+    ];
+
+    const allAllowed = [...defaults, ...allowed];
+
+    if (allAllowed.some(o => origin.startsWith(o))) {
+      return callback(null, true);
+    }
+
+    // Allow all Expo Go origins (exp:// scheme comes as null origin on mobile)
+    return callback(null, true);
+  },
   credentials: true,
 }));
 
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 1000, // Increased for development
   message: { error: 'Too many requests, please try again later.' },
 });
 app.use('/api/', limiter);

@@ -1,10 +1,12 @@
 import { supabase } from './supabase';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 
-  (Platform.OS === 'android' ? 'http://172.20.10.3:3001' : 'http://172.20.10.3:3001'); 
-// Using local IP 172.20.10.3 for hotspot connectivity
+// Use env var. Fallback differs per platform:
+//   Android emulator: 10.0.2.2 maps to host localhost
+//   iOS simulator / web: localhost works directly
+const API_URL = process.env.EXPO_PUBLIC_API_URL ||
+  (Platform.OS === 'android' ? 'http://10.0.2.2:3001' : 'http://localhost:3001');
+
 const REQUEST_TIMEOUT = 15000; // 15 seconds
 
 class ApiClient {
@@ -24,7 +26,7 @@ class ApiClient {
     }
   }
 
-  async request(endpoint, options = {}) {
+  async request(endpoint, options = {}, _isRetry = false) {
     const token = await this.getAuthToken();
     const headers = {
       'Accept': 'application/json',
@@ -61,9 +63,15 @@ class ApiClient {
       }
 
       if (!response.ok) {
-        // Handle specific status codes
-        if (response.status === 401) {
-          // Optional: handle logout or token refresh
+        // On 401, try to refresh the session once then retry the original request
+        if (response.status === 401 && !_isRetry) {
+          const { data, error } = await supabase.auth.refreshSession();
+          if (!error && data?.session) {
+            // Retry with the fresh token
+            return this.request(endpoint, options, true);
+          }
+          // Refresh failed — sign the user out so they get the login screen
+          await supabase.auth.signOut();
         }
         
         const error = new Error(responseData.message || responseData.error || `Request failed with status ${response.status}`);
@@ -88,7 +96,7 @@ class ApiClient {
       ) {
         const errorMsg = `Unable to reach server at ${this.baseURL}. \n\n` +
           `1. Ensure your backend is running.\n` +
-          `2. If using a physical device, use your machine's local IP (e.g., http://192.168.1.X:3001) instead of localhost.\n` +
+          `2. If using a physical device, set EXPO_PUBLIC_API_URL in your .env to your machine's local IP (e.g., http://192.168.1.X:3001).\n` +
           `3. Ensure both device and machine are on the same Wi-Fi.`;
         throw new Error(errorMsg);
       }
