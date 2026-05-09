@@ -164,9 +164,9 @@ export default function OnboardingStep6({ navigation, nextStep }) {
 
         <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: '75%' }]} />
+            <View style={[styles.progressFill, { width: '80%' }]} />
           </View>
-          <Text style={styles.progressText}>Step 6 of 8</Text>
+          <Text style={styles.progressText}>Step 8 of 10</Text>
         </View>
       </View>
     </SafeAreaView>

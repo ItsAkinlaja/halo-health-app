@@ -127,9 +127,9 @@ export default function OnboardingNotificationTone({ navigation, nextStep }) {
 
         <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: '62.5%' }]} />
+            <View style={[styles.progressFill, { width: '50%' }]} />
           </View>
-          <Text style={styles.progressText}>Step 5 of 8</Text>
+          <Text style={styles.progressText}>Step 5 of 10</Text>
         </View>
       </View>
     </SafeAreaView>

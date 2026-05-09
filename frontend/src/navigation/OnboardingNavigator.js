@@ -12,7 +12,6 @@ import OnboardingStep7 from '../screens/onboarding/OnboardingStep7';
 import OnboardingStep8 from '../screens/onboarding/OnboardingStep8';
 import { useAuth } from '../context/AuthContext';
 import { OnboardingProvider, useOnboarding } from '../context/OnboardingContext';
-
 import { profileService } from '../services/profileService';
 
 const Stack = createNativeStackNavigator();
@@ -103,21 +102,21 @@ const OnboardingStep7Wrapper = ({ navigation }) => {
 
 const OnboardingStep8Wrapper = ({ navigation }) => {
   const { completeOnboarding, user } = useAuth();
-  const { data } = useOnboarding();
+  const { data, persistData } = useOnboarding();
 
   const handleComplete = async () => {
     try {
+      // Persist onboarding data
+      await persistData();
+
+      // Check if profile already exists before creating
       if (user?.id) {
         const existingProfiles = await profileService.getProfiles(user.id);
-        
-        if (existingProfiles && existingProfiles.length > 0) {
-          // Profiles already exist
-        } else {
-          const fullName = user.user_metadata?.full_name || 
-            (user.user_metadata?.first_name && user.user_metadata?.last_name 
-              ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
-              : user.user_metadata?.name || 'My Profile');
-          
+        if (!existingProfiles || existingProfiles.length === 0) {
+          const fullName = user.user_metadata?.full_name ||
+            user.user_metadata?.name ||
+            user.email?.split('@')[0] || 'My Profile';
+
           await profileService.createProfile({
             user_id: user.id,
             name: fullName,
@@ -126,16 +125,15 @@ const OnboardingStep8Wrapper = ({ navigation }) => {
             dietary_restrictions: data.dietaryPreferences || [],
             allergies: [...(data.allergies || []), ...(data.customAllergies || [])],
             health_conditions: data.healthConditions || [],
-            notification_settings: data.notificationSettings || {},
           });
 
-          if (data.familyMembers && data.familyMembers.length > 0) {
+          if (data.familyMembers?.length > 0) {
             for (const member of data.familyMembers) {
               await profileService.createProfile({
                 user_id: user.id,
                 name: member.name,
                 age: member.age ? parseInt(member.age, 10) : null,
-                relationship: member.relationship,
+                relationship: member.relationship || 'other',
                 is_primary: false,
               });
             }

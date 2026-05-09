@@ -109,12 +109,11 @@ const OnboardingStep7Wrapper = ({ navigation }) => {
 };
 
 const OnboardingStep8Wrapper = ({ navigation }) => {
-  const { data } = useOnboarding();
+  const { data, persistData } = useOnboarding();
 
   const handleComplete = async () => {
-    // Save onboarding data to storage for later use after registration
-    await storage.setItem(STORAGE_KEYS.ONBOARDING_DATA, data);
-    // Navigate to registration
+    // Persist all onboarding data to AsyncStorage before navigating to Register
+    await persistData();
     navigation.navigate('Register');
   };
 

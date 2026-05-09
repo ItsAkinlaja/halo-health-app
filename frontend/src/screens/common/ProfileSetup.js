@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView,
   KeyboardAvoidingView, Platform, Alert,
@@ -48,6 +48,60 @@ export default function ProfileSetup({ navigation }) {
   const [otherAllergy, setOtherAllergy] = useState('');
   const [otherRestriction, setOtherRestriction] = useState('');
 
+  // Pre-fill from onboarding data
+  useEffect(() => {
+    const loadOnboardingData = async () => {
+      const onboardingData = await storage.getItem(STORAGE_KEYS.ONBOARDING_DATA);
+      if (!onboardingData) return;
+
+      // Pre-fill name from user metadata
+      const metaName = user?.user_metadata?.full_name ||
+        user?.user_metadata?.name ||
+        user?.email?.split('@')[0] || '';
+      if (metaName) setName(metaName);
+
+      // Pre-fill goals from onboarding
+      if (onboardingData.goals?.length > 0) {
+        // Map onboarding goal IDs to ProfileSetup goal IDs where possible
+        const mapped = onboardingData.goals.filter(g =>
+          HEALTH_GOALS.some(hg => hg.id === g)
+        );
+        if (mapped.length > 0) setSelectedGoals(mapped);
+      }
+
+      // Pre-fill dietary restrictions
+      if (onboardingData.dietaryPreferences?.length > 0) {
+        const mapped = onboardingData.dietaryPreferences
+          .map(p => {
+            const map = {
+              vegetarian: 'Vegetarian', vegan: 'Vegan', gluten_free: 'Gluten-Free',
+              dairy_free: 'Dairy-Free', keto: 'Keto', paleo: 'Paleo',
+              pescatarian: 'Pescatarian', halal: 'Halal', kosher: 'Kosher',
+              low_sodium: 'Low-Carb', low_sugar: 'Low-Fat', none: 'None',
+            };
+            return map[p] || null;
+          })
+          .filter(Boolean);
+        if (mapped.length > 0) setSelectedRestrictions(mapped);
+      }
+
+      // Pre-fill allergies
+      if (onboardingData.allergies?.length > 0) {
+        const map = {
+          peanuts: 'Peanuts', tree_nuts: 'Tree Nuts', milk: 'Milk', eggs: 'Eggs',
+          wheat: 'Wheat', soy: 'Soy', fish: 'Fish', shellfish: 'Shellfish',
+          sesame: 'Sesame',
+        };
+        const mapped = onboardingData.allergies.map(a => map[a] || null).filter(Boolean);
+        const custom = onboardingData.customAllergies || [];
+        if (mapped.length > 0) setSelectedAllergies(mapped);
+        if (custom.length > 0) setOtherAllergy(custom.join(', '));
+      }
+    };
+
+    loadOnboardingData();
+  }, [user]);
+
   const toggleSelection = (item, list, setList) => {
     if (list.includes(item)) {
       setList(list.filter(i => i !== item));
@@ -87,10 +141,8 @@ export default function ProfileSetup({ navigation }) {
   const handleCreateProfile = async () => {
     setLoading(true);
     try {
-      // Get onboarding data from storage
       const onboardingData = await storage.getItem(STORAGE_KEYS.ONBOARDING_DATA) || {};
 
-      // Create primary profile
       const profileData = {
         name: name.trim(),
         relationship: 'self',
@@ -110,28 +162,34 @@ export default function ProfileSetup({ navigation }) {
       };
 
       const response = await profileService.createProfile(profileData);
-      
+
       if (response.status === 'success' && response.data) {
-        // Set as active profile
+        // Save notification settings to user_settings if collected during onboarding
+        if (onboardingData.notificationSettings || onboardingData.haloVoice || onboardingData.notificationTone) {
+          try {
+            await profileService.updateUserProfile(user.id, {
+              voice_preference: onboardingData.haloVoice || 'calm_clear_female',
+              notification_tone: onboardingData.notificationTone || 'motivational',
+              notification_preferences: onboardingData.notificationSettings || {},
+            });
+          } catch (settingsError) {
+            // Non-critical — don't block profile creation
+            console.warn('Failed to save notification settings:', settingsError.message);
+          }
+        }
+
         setActiveProfile(response.data);
         setProfiles([response.data]);
-        
-        // Store profile ID in AsyncStorage
         await storage.setItem(STORAGE_KEYS.ACTIVE_PROFILE_ID, response.data.id);
         await storage.setItem(STORAGE_KEYS.PROFILE_SETUP_COMPLETED, true);
 
-        // Navigate to main app
         navigation.replace('MainApp');
       } else {
         throw new Error('Failed to create profile');
       }
     } catch (error) {
       console.error('Profile creation error:', error);
-      Alert.alert(
-        'Error',
-        error.message || 'Failed to create profile. Please try again.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Error', error.message || 'Failed to create profile. Please try again.');
     } finally {
       setLoading(false);
     }

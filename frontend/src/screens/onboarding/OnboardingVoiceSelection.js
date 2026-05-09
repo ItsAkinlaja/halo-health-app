@@ -148,9 +148,9 @@ export default function OnboardingVoiceSelection({ navigation, nextStep }) {
 
         <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: '50%' }]} />
+            <View style={[styles.progressFill, { width: '40%' }]} />
           </View>
-          <Text style={styles.progressText}>Step 4 of 8</Text>
+          <Text style={styles.progressText}>Step 4 of 10</Text>
         </View>
       </View>
     </SafeAreaView>
