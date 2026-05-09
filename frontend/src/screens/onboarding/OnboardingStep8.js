@@ -43,10 +43,13 @@ export default function OnboardingStep8({ navigation, nextStep }) {
   const handleRequestNotifications = async () => {
     setRequesting(true);
     try {
+      // expo-notifications not fully supported in Expo Go from SDK 53+
+      // Gracefully handle and continue
       const { status } = await Notifications.requestPermissionsAsync();
       setNotifGranted(status === 'granted');
     } catch (error) {
-      console.warn('Notification permission error:', error.message);
+      // Non-critical — silently continue
+      setNotifGranted(false);
     } finally {
       setRequesting(false);
     }
@@ -79,8 +82,12 @@ export default function OnboardingStep8({ navigation, nextStep }) {
     setRequesting(true);
     try {
       await requestCameraPermission();
-      const { status } = await Notifications.requestPermissionsAsync();
-      setNotifGranted(status === 'granted');
+      try {
+        const { status } = await Notifications.requestPermissionsAsync();
+        setNotifGranted(status === 'granted');
+      } catch {
+        setNotifGranted(false);
+      }
     } catch (error) {
       console.warn('Permission request error:', error.message);
     } finally {
