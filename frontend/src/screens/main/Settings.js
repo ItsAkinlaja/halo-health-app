@@ -189,6 +189,14 @@ export default function Settings({ navigation }) {
         ))}
 
         <TouchableOpacity 
+          style={styles.signOutBtn}
+          onPress={handleSignOut}
+        >
+          <Ionicons name="log-out-outline" size={20} color={COLORS.white} />
+          <Text style={styles.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
           style={styles.deleteBtn}
           onPress={handleDeleteAccount}
         >
@@ -268,6 +276,21 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.base,
     fontWeight: '600',
     color: COLORS.textPrimary,
+  },
+  signOutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.error,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.base,
+    marginTop: SPACING.xl,
+  },
+  signOutText: {
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: '700',
+    color: COLORS.white,
   },
   deleteBtn: {
     backgroundColor: COLORS.error + '15',
