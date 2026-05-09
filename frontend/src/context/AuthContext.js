@@ -90,8 +90,16 @@ export function AuthProvider({ children }) {
 
   const signIn = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    // State is updated by the onAuthStateChange SIGNED_IN event — no need to set it here.
+    if (error) {
+      // Provide clear error messages
+      if (error.message?.toLowerCase().includes('email not confirmed')) {
+        throw new Error('Please verify your email first. Check your inbox for the verification code.');
+      }
+      if (error.message?.toLowerCase().includes('invalid login')) {
+        throw new Error('Incorrect email or password. Please try again.');
+      }
+      throw error;
+    }
     return data;
   };
 
