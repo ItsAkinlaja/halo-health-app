@@ -35,7 +35,7 @@ export default function Register({ navigation }) {
 
     setIsCheckingId(true);
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_API_URL || (Platform.OS === 'android' ? 'http://172.20.10.3:3001' : 'http://172.20.10.3:3001');
+      const baseUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
       const response = await fetch(`${baseUrl}/api/auth/check-halo-id?haloHealthId=${id}`);
       const data = await response.json();
       
