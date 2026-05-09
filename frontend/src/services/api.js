@@ -5,7 +5,9 @@ import { Platform } from 'react-native';
 //   Android emulator: 10.0.2.2 maps to host localhost
 //   iOS simulator / web: localhost works directly
 const API_URL = process.env.EXPO_PUBLIC_API_URL ||
-  (Platform.OS === 'android' ? 'http://10.0.2.2:3001' : 'http://localhost:3001');
+  'https://halo-health-app-production.up.railway.app';
+
+console.log('[API] Connecting to:', API_URL);
 
 const REQUEST_TIMEOUT = 15000; // 15 seconds
 
