@@ -205,11 +205,11 @@ export default function HomeDashboard({ navigation }) {
               onPress={() => navigation.navigate('Notifications')}
             >
               <Ionicons name="notifications-outline" size={22} color={COLORS.textPrimary} />
-              {unreadCount > 0 && (
+              {unreadCount > 0 ? (
                 <View style={styles.notifDot}>
                   <Text style={styles.notifCount}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
                 </View>
-              )}
+              ) : null}
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.iconBtn}
@@ -221,7 +221,7 @@ export default function HomeDashboard({ navigation }) {
         </View>
 
         {/* Medical Disclaimer Banner */}
-        {showDisclaimerBanner && (
+        {showDisclaimerBanner ? (
           <TouchableOpacity
             style={styles.disclaimerBanner}
             onPress={() => navigation.navigate('MedicalDisclaimer')}
@@ -236,10 +236,10 @@ export default function HomeDashboard({ navigation }) {
             </View>
             <Ionicons name="chevron-forward" size={20} color={COLORS.warning} />
           </TouchableOpacity>
-        )}
+        ) : null}
 
         {/* Profile Selector */}
-        {profiles.length > 0 && (
+        {profiles.length > 0 ? (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -251,7 +251,7 @@ export default function HomeDashboard({ navigation }) {
                 key={p.id}
                 style={[
                   styles.profileChip,
-                  activeProfile?.id === p.id && styles.profileChipActive,
+                  activeProfile?.id === p.id ? styles.profileChipActive : null,
                 ]}
                 onPress={async () => {
                   setActiveProfile(p);
@@ -260,12 +260,12 @@ export default function HomeDashboard({ navigation }) {
               >
                 <View style={[
                   styles.profileDot,
-                  activeProfile?.id === p.id && styles.profileDotActive,
+                  activeProfile?.id === p.id ? styles.profileDotActive : null,
                 ]} />
                 <Text
                   style={[
                     styles.profileName,
-                    activeProfile?.id === p.id && styles.profileNameActive,
+                    activeProfile?.id === p.id ? styles.profileNameActive : null,
                   ]}
                 >
                   {p.name}
@@ -280,7 +280,7 @@ export default function HomeDashboard({ navigation }) {
               <Text style={styles.profileAddText}>Add Profile</Text>
             </TouchableOpacity>
           </ScrollView>
-        )}
+        ) : null}
 
         {/* Health Score Hero */}
         <Card style={styles.heroCard} variant="elevated">
@@ -293,7 +293,7 @@ export default function HomeDashboard({ navigation }) {
                   : 'Start scanning to see your score'
                 }
               </Text>
-              {scanStats?.trend && (
+              {scanStats?.trend ? (
                 <View style={styles.trendRow}>
                   <Ionicons 
                     name={scanStats.trend > 0 ? 'trending-up' : 'trending-down'} 
@@ -304,7 +304,7 @@ export default function HomeDashboard({ navigation }) {
                     {scanStats.trend > 0 ? '+' : ''}{scanStats.trend} points this week
                   </Text>
                 </View>
-              )}
+              ) : null}
             </View>
             <ScoreRing score={healthScore} size={110} strokeWidth={9} />
           </View>
@@ -398,9 +398,9 @@ export default function HomeDashboard({ navigation }) {
             >
               <View style={styles.mealHeader}>
                 <Text style={styles.mealType}>{item.meal}</Text>
-                {item.done && (
+                {item.done ? (
                   <Ionicons name="checkmark-circle" size={16} color={COLORS.success} />
-                )}
+                ) : null}
               </View>
               <Text style={styles.mealName} numberOfLines={2}>
                 {item.name}

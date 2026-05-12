@@ -10,7 +10,7 @@ import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../styles/theme';
 
 export default function Settings({ navigation }) {
   const { user } = useAppContext();
-  const { signOut, checkBiometricSupport, authenticateWithBiometrics, enableBiometricLogin, disableBiometricLogin, getBiometricCredentials, deleteAccount } = useAuth();
+  const { signOut, signIn, resetAppState, checkBiometricSupport, authenticateWithBiometrics, enableBiometricLogin, disableBiometricLogin, getBiometricCredentials, deleteAccount } = useAuth();
   const [biometricEnabled, setBiometricEnabled] = useState(false);
 
   React.useEffect(() => {
@@ -147,6 +147,12 @@ export default function Settings({ navigation }) {
       title: 'Developer',
       items: [
         { icon: 'bug-outline', label: 'Debug Info', screen: 'Debug' },
+        { icon: 'refresh-outline', label: 'Reset Onboarding (Testing)', action: () => {
+          Alert.alert('Reset Onboarding', 'This will clear all app data and show onboarding again. Use for testing only.', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Reset', style: 'destructive', onPress: resetAppState },
+          ]);
+        }},
       ],
     },
   ];
@@ -187,14 +193,6 @@ export default function Settings({ navigation }) {
             </Card>
           </View>
         ))}
-
-        <TouchableOpacity 
-          style={styles.signOutBtn}
-          onPress={handleSignOut}
-        >
-          <Ionicons name="log-out-outline" size={20} color={COLORS.white} />
-          <Text style={styles.signOutText}>Sign Out</Text>
-        </TouchableOpacity>
 
         <TouchableOpacity 
           style={styles.deleteBtn}

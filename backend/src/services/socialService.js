@@ -27,22 +27,36 @@ class SocialService {
   }
 
   async getPost(postId, userId) {
-    const { data, error } = await supabase
-      .from('social_posts')
-      .select(`
-        *,
-        user:users!user_id(id, username, avatar_url, halo_health_id),
-        is_liked:post_likes!left(user_id)
-      `)
-      .eq('id', postId)
-      .single();
-    
-    if (error) throw error;
-    
-    // Check if current user liked this post
-    data.is_liked = data.is_liked?.some(l => l.user_id === userId) || false;
-    
-    return data;
+    try {
+      const { data, error } = await supabase
+        .from('social_posts')
+        .select(`
+          *,
+          user:users(id, username, avatar_url, halo_health_id),
+          is_liked:post_likes(user_id)
+        `)
+        .eq('id', postId)
+        .single();
+      
+      if (error) {
+        // Fallback
+        const { data: simpleData, error: simpleError } = await supabase
+          .from('social_posts')
+          .select('*')
+          .eq('id', postId)
+          .single();
+        if (simpleError) throw simpleError;
+        return simpleData;
+      }
+      
+      // Check if current user liked this post
+      data.is_liked = data.is_liked?.some(l => l.user_id === userId) || false;
+      
+      return data;
+    } catch (error) {
+      console.error('[SocialService] getPost failed:', error);
+      throw error;
+    }
   }
 
   async updatePost(postId, userId, updates) {
@@ -74,60 +88,96 @@ class SocialService {
   async getFeed(userId, options = {}) {
     const { filter = 'all', limit = 20, offset = 0 } = options;
     
-    let query = supabase
-      .from('social_posts')
-      .select(`
-        *,
-        user:users!user_id(id, username, avatar_url, halo_health_id),
-        is_liked:post_likes!left(user_id)
-      `)
-      .eq('is_public', true)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
-    
-    if (filter === 'following') {
-      const { data: follows } = await supabase
-        .from('user_follows')
-        .select('following_id')
-        .eq('follower_id', userId);
+    try {
+      let query = supabase
+        .from('social_posts')
+        .select(`
+          *,
+          user:users(id, username, avatar_url, halo_health_id),
+          is_liked:post_likes(user_id)
+        `)
+        .eq('is_public', true)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
       
-      const followingIds = follows?.map(f => f.following_id) || [];
-      if (followingIds.length === 0) return [];
+      if (filter === 'following') {
+        const { data: follows } = await supabase
+          .from('user_follows')
+          .select('following_id')
+          .eq('follower_id', userId);
+        
+        const followingIds = follows?.map(f => f.following_id) || [];
+        if (followingIds.length === 0) return [];
+        
+        query = query.in('user_id', followingIds);
+      }
       
-      query = query.in('user_id', followingIds);
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('[SocialService] Supabase error in getFeed:', error);
+        // Fallback to simpler query if join fails
+        const { data: simpleData, error: simpleError } = await supabase
+          .from('social_posts')
+          .select('*')
+          .eq('is_public', true)
+          .order('created_at', { ascending: false })
+          .range(offset, offset + limit - 1);
+          
+        if (simpleError) throw simpleError;
+        return simpleData || [];
+      }
+      
+      // Process is_liked for each post
+      const processedPosts = (data || []).map(post => ({
+        ...post,
+        is_liked: post.is_liked?.some(l => l.user_id === userId) || false,
+        likes_count: post.likes_count || 0,
+      }));
+      
+      return processedPosts;
+    } catch (error) {
+      console.error('[SocialService] getFeed failed:', error);
+      return []; // Return empty array instead of throwing to prevent app crash
     }
-    
-    const { data, error } = await query;
-    if (error) throw error;
-    
-    // Add is_liked flag
-    return data.map(post => ({
-      ...post,
-      is_liked: post.is_liked?.some(l => l.user_id === userId) || false,
-    }));
   }
-
   async getUserPosts(targetUserId, currentUserId, options = {}) {
     const { limit = 20, offset = 0 } = options;
     
-    const { data, error } = await supabase
-      .from('social_posts')
-      .select(`
-        *,
-        user:users!user_id(id, username, avatar_url, halo_health_id),
-        is_liked:post_likes!left(user_id)
-      `)
-      .eq('user_id', targetUserId)
-      .eq('is_public', true)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
-    
-    if (error) throw error;
-    
-    return data.map(post => ({
-      ...post,
-      is_liked: post.is_liked?.some(l => l.user_id === currentUserId) || false,
-    }));
+    try {
+      const { data, error } = await supabase
+        .from('social_posts')
+        .select(`
+          *,
+          user:users(id, username, avatar_url, halo_health_id),
+          is_liked:post_likes(user_id)
+        `)
+        .eq('user_id', targetUserId)
+        .eq('is_public', true)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+      
+      if (error) {
+        // Fallback
+        const { data: simpleData, error: simpleError } = await supabase
+          .from('social_posts')
+          .select('*')
+          .eq('user_id', targetUserId)
+          .eq('is_public', true)
+          .order('created_at', { ascending: false })
+          .range(offset, offset + limit - 1);
+        if (simpleError) throw simpleError;
+        return simpleData || [];
+      }
+      
+      return (data || []).map(post => ({
+        ...post,
+        is_liked: post.is_liked?.some(l => l.user_id === currentUserId) || false,
+      }));
+    } catch (error) {
+      console.error('[SocialService] getUserPosts failed:', error);
+      return [];
+    }
   }
 
   // ==================== LIKES ====================

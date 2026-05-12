@@ -33,7 +33,7 @@ const COMMON_ALLERGIES = [
 ];
 
 export default function ProfileSetup({ navigation }) {
-  const { user } = useAuth();
+  const { user, completeProfileSetup } = useAuth();
   const { setActiveProfile, setProfiles } = useAppContext();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -163,7 +163,13 @@ export default function ProfileSetup({ navigation }) {
 
       const response = await profileService.createProfile(profileData);
 
-      if (response.status === 'success' && response.data) {
+      if (response && (response.status === 'success' || response.id || response.data)) {
+        const profile = response.data || (response.id ? response : null);
+        
+        if (!profile) {
+          throw new Error('Server returned success but no profile data');
+        }
+
         // Save notification settings to user_settings if collected during onboarding
         if (onboardingData.notificationSettings || onboardingData.haloVoice || onboardingData.notificationTone) {
           try {
@@ -178,14 +184,14 @@ export default function ProfileSetup({ navigation }) {
           }
         }
 
-        setActiveProfile(response.data);
-        setProfiles([response.data]);
-        await storage.setItem(STORAGE_KEYS.ACTIVE_PROFILE_ID, response.data.id);
-        await storage.setItem(STORAGE_KEYS.PROFILE_SETUP_COMPLETED, true);
-
-        navigation.replace('MainApp');
+        setActiveProfile(profile);
+        setProfiles([profile]);
+        await storage.setItem(STORAGE_KEYS.ACTIVE_PROFILE_ID, profile.id);
+        
+        await completeProfileSetup();
+        // Navigation will happen automatically in AppNavigator due to state change
       } else {
-        throw new Error('Failed to create profile');
+        throw new Error('Failed to create profile: Invalid response from server');
       }
     } catch (error) {
       console.error('Profile creation error:', error);
@@ -280,16 +286,16 @@ export default function ProfileSetup({ navigation }) {
             <Text
               style={[
                 styles.goalLabel,
-                selectedGoals.includes(goal.id) && styles.goalLabelActive,
+                selectedGoals.includes(goal.id) ? styles.goalLabelActive : null,
               ]}
             >
               {goal.label}
             </Text>
-            {selectedGoals.includes(goal.id) && (
+            {selectedGoals.includes(goal.id) ? (
               <View style={styles.checkmark}>
                 <Ionicons name="checkmark" size={16} color={COLORS.white} />
               </View>
-            )}
+            ) : null}
           </TouchableOpacity>
         ))}
       </View>
@@ -307,14 +313,14 @@ export default function ProfileSetup({ navigation }) {
             key={restriction}
             style={[
               styles.chip,
-              selectedRestrictions.includes(restriction) && styles.chipActive,
+              selectedRestrictions.includes(restriction) ? styles.chipActive : null,
             ]}
             onPress={() => toggleSelection(restriction, selectedRestrictions, setSelectedRestrictions)}
           >
             <Text
               style={[
                 styles.chipText,
-                selectedRestrictions.includes(restriction) && styles.chipTextActive,
+                selectedRestrictions.includes(restriction) ? styles.chipTextActive : null,
               ]}
             >
               {restriction}
@@ -323,7 +329,7 @@ export default function ProfileSetup({ navigation }) {
         ))}
       </View>
 
-      {selectedRestrictions.includes('Other') && (
+      {selectedRestrictions.includes('Other') ? (
         <View style={[styles.inputGroup, { marginTop: SPACING.lg }]}>
           <Text style={styles.label}>Please specify other dietary restriction</Text>
           <View style={styles.inputWrap}>
@@ -338,7 +344,7 @@ export default function ProfileSetup({ navigation }) {
             />
           </View>
         </View>
-      )}
+      ) : null}
     </View>
   );
 
@@ -353,14 +359,14 @@ export default function ProfileSetup({ navigation }) {
             key={allergy}
             style={[
               styles.chip,
-              selectedAllergies.includes(allergy) && styles.chipActive,
+              selectedAllergies.includes(allergy) ? styles.chipActive : null,
             ]}
             onPress={() => toggleSelection(allergy, selectedAllergies, setSelectedAllergies)}
           >
             <Text
               style={[
                 styles.chipText,
-                selectedAllergies.includes(allergy) && styles.chipTextActive,
+                selectedAllergies.includes(allergy) ? styles.chipTextActive : null,
               ]}
             >
               {allergy}
@@ -369,7 +375,7 @@ export default function ProfileSetup({ navigation }) {
         ))}
       </View>
 
-      {selectedAllergies.includes('Other') && (
+      {selectedAllergies.includes('Other') ? (
         <View style={[styles.inputGroup, { marginTop: SPACING.lg }]}>
           <Text style={styles.label}>Please specify other allergy</Text>
           <View style={styles.inputWrap}>
@@ -384,7 +390,7 @@ export default function ProfileSetup({ navigation }) {
             />
           </View>
         </View>
-      )}
+      ) : null}
     </View>
   );
 
@@ -401,7 +407,6 @@ export default function ProfileSetup({ navigation }) {
               <Ionicons name="person-add" size={32} color={COLORS.primary} />
             </View>
             <Text style={styles.title}>Create Your Profile</Text>
-            
             {/* Progress */}
             <View style={styles.progressContainer}>
               <View style={styles.progressBar}>
@@ -418,16 +423,16 @@ export default function ProfileSetup({ navigation }) {
             showsVerticalScrollIndicator={false}
           >
             <Card style={styles.card}>
-              {step === 1 && renderStep1()}
-              {step === 2 && renderStep2()}
-              {step === 3 && renderStep3()}
-              {step === 4 && renderStep4()}
+              {step === 1 ? renderStep1() : null}
+              {step === 2 ? renderStep2() : null}
+              {step === 3 ? renderStep3() : null}
+              {step === 4 ? renderStep4() : null}
             </Card>
           </ScrollView>
 
           {/* Footer */}
           <View style={styles.footer}>
-            {step > 1 && (
+            {step > 1 ? (
               <TouchableOpacity
                 style={styles.backButton}
                 onPress={() => setStep(step - 1)}
@@ -436,7 +441,7 @@ export default function ProfileSetup({ navigation }) {
                 <Ionicons name="arrow-back" size={20} color={COLORS.primary} />
                 <Text style={styles.backText}>Back</Text>
               </TouchableOpacity>
-            )}
+            ) : null}
             <Button
               title={step === 4 ? 'Complete Setup' : 'Continue'}
               onPress={handleNext}

@@ -11,6 +11,7 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isFirstTime, setIsFirstTime] = useState(false);
   const [needsDisclaimer, setNeedsDisclaimer] = useState(false);
+  const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
   const isProcessing = useRef(false);
 
   useEffect(() => {
@@ -20,36 +21,46 @@ export function AuthProvider({ children }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (!mounted || isProcessing.current) return;
+        if (!mounted) return;
         
-        if (event === 'INITIAL_SESSION') return;
-        
-        if (event === 'SIGNED_OUT') {
-          isProcessing.current = true;
-          setUser(null);
-          await storage.removeItem(STORAGE_KEYS.USER_SESSION);
-          setIsFirstTime(false);
-          setNeedsDisclaimer(false);
-          setIsLoading(false);
+        if (event === 'INITIAL_SESSION') {
+          return;
+        }
+
+        if (isProcessing.current) {
+          return;
+        }
+
+        try {
+          if (event === 'SIGNED_OUT') {
+            isProcessing.current = true;
+            setUser(null);
+            await storage.removeItem(STORAGE_KEYS.USER_SESSION);
+            setIsFirstTime(false);
+            setNeedsDisclaimer(false);
+            setNeedsProfileSetup(false);
+            setIsLoading(false);
+          } else if ((event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') && session?.user) {
+            isProcessing.current = true;
+            
+            await storage.setItem(STORAGE_KEYS.USER_SESSION, session);
+            
+            const onboardingCompleted = await storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
+            const disclaimerAccepted = await storage.getItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED);
+            const profileSetupCompleted = await storage.getItem(STORAGE_KEYS.PROFILE_SETUP_COMPLETED);
+            
+            setIsFirstTime(!onboardingCompleted);
+            setNeedsDisclaimer(onboardingCompleted && !disclaimerAccepted);
+            setNeedsProfileSetup(onboardingCompleted && disclaimerAccepted && !profileSetupCompleted);
+            setUser(session.user);
+            
+            await new Promise(resolve => setTimeout(resolve, 100));
+            setIsLoading(false);
+          }
+        } catch (error) {
+          console.error('[AuthContext] Error in onAuthStateChange:', error);
+        } finally {
           isProcessing.current = false;
-        } else if (event === 'SIGNED_IN' && session?.user) {
-          isProcessing.current = true;
-          await storage.setItem(STORAGE_KEYS.USER_SESSION, session);
-          
-          const onboardingCompleted = await storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
-          const disclaimerAccepted = await storage.getItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED);
-          
-          setIsFirstTime(!onboardingCompleted);
-          setNeedsDisclaimer(onboardingCompleted && !disclaimerAccepted);
-          setUser(session.user);
-          
-          await new Promise(resolve => setTimeout(resolve, 100));
-          setIsLoading(false);
-          isProcessing.current = false;
-        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-          await storage.setItem(STORAGE_KEYS.USER_SESSION, session);
-        } else if (event === 'USER_UPDATED' && session?.user) {
-          setUser(session.user);
         }
       }
     );
@@ -70,27 +81,34 @@ export function AuthProvider({ children }) {
         
         const onboardingCompleted = await storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
         const disclaimerAccepted = await storage.getItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED);
+        const profileSetupCompleted = await storage.getItem(STORAGE_KEYS.PROFILE_SETUP_COMPLETED);
         
         setIsFirstTime(!onboardingCompleted);
         setNeedsDisclaimer(onboardingCompleted && !disclaimerAccepted);
+        setNeedsProfileSetup(onboardingCompleted && disclaimerAccepted && !profileSetupCompleted);
       } else {
         setUser(null);
         setIsFirstTime(false);
         setNeedsDisclaimer(false);
+        setNeedsProfileSetup(false);
       }
     } catch (error) {
       console.warn('Session check error:', error.message);
       setUser(null);
       setIsFirstTime(false);
       setNeedsDisclaimer(false);
+      setNeedsProfileSetup(false);
     } finally {
       setIsLoading(false);
     }
   };
 
   const signIn = async (email, password) => {
+    console.log('[AuthContext] Attempting sign-in for:', email);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    
     if (error) {
+      console.log('[AuthContext] Sign-in error:', error.message);
       // Provide clear error messages
       if (error.message?.toLowerCase().includes('email not confirmed')) {
         throw new Error('Please verify your email first. Check your inbox for the verification code.');
@@ -100,6 +118,8 @@ export function AuthProvider({ children }) {
       }
       throw error;
     }
+    
+    console.log('[AuthContext] Sign-in successful for:', data.user?.email);
     return data;
   };
 
@@ -171,6 +191,16 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Resets ALL local storage including onboarding — used for testing
+  const resetAppState = async () => {
+    await storage.clearAll();
+    await supabase.auth.signOut();
+    setUser(null);
+    setIsFirstTime(true);
+    setNeedsDisclaimer(false);
+    setIsLoading(false);
+  };
+
   const sendPasswordResetOtp = async (email) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: 'halohealth://auth/callback',
@@ -191,6 +221,25 @@ export function AuthProvider({ children }) {
     setIsFirstTime(false);
     setNeedsDisclaimer(true);
     await new Promise(resolve => setTimeout(resolve, 100));
+    setIsLoading(false);
+  };
+
+  const completeProfileSetup = async () => {
+    setIsLoading(true);
+    await storage.setItem(STORAGE_KEYS.PROFILE_SETUP_COMPLETED, true);
+    setNeedsProfileSetup(false);
+    setIsLoading(false);
+  };
+
+  const completeMedicalDisclaimer = async () => {
+    setIsLoading(true);
+    await storage.setItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED, true);
+    setNeedsDisclaimer(false);
+    
+    // After disclaimer, check if profile setup is needed
+    const profileSetupCompleted = await storage.getItem(STORAGE_KEYS.PROFILE_SETUP_COMPLETED);
+    setNeedsProfileSetup(!profileSetupCompleted);
+    
     setIsLoading(false);
   };
 
@@ -260,14 +309,18 @@ export function AuthProvider({ children }) {
     isLoading,
     isFirstTime,
     needsDisclaimer,
+    needsProfileSetup,
     signIn,
     signUp,
     signOut,
+    resetAppState,
     verifyOtp,
     resendOtp,
     sendPasswordResetOtp,
     resetPasswordWithOtp,
     completeOnboarding,
+    completeProfileSetup,
+    completeMedicalDisclaimer,
     checkBiometricSupport,
     authenticateWithBiometrics,
     enableBiometricLogin,

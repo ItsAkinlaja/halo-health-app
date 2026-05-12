@@ -44,9 +44,9 @@ const PostCard = React.memo(({ post, onLike, onSave, onComment }) => {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.postContent}>{post.content}</Text>
+      <Text style={styles.postContent}>{post.content || ''}</Text>
 
-      {post.post_type === 'scan' && post.product_score !== undefined && (
+      {post.post_type === 'scan' && post.product_score !== undefined && post.product_score !== null ? (
         <View style={[styles.scanResult, { borderLeftColor: scoreColor }]}>
           <View style={[styles.scanScoreBox, { backgroundColor: scoreColor + '18' }]}>
             <Text style={[styles.scanScoreNum, { color: scoreColor }]}>{post.product_score}</Text>
@@ -56,16 +56,16 @@ const PostCard = React.memo(({ post, onLike, onSave, onComment }) => {
             <ScoreBadge score={post.product_score} size="sm" />
           </View>
         </View>
-      )}
+      ) : null}
 
-      {post.post_type === 'milestone' && post.health_score && (
+      {post.post_type === 'milestone' && post.health_score ? (
         <View style={styles.milestoneBanner}>
           <Ionicons name="trophy-outline" size={18} color={COLORS.warning} />
           <Text style={styles.milestoneText}>Health Score: {post.health_score}</Text>
         </View>
-      )}
+      ) : null}
 
-      {post.hashtags && post.hashtags.length > 0 && (
+      {post.hashtags && post.hashtags.length > 0 ? (
         <View style={styles.tagRow}>
           {post.hashtags.map(tag => (
             <TouchableOpacity key={tag} style={styles.tag}>
@@ -73,7 +73,7 @@ const PostCard = React.memo(({ post, onLike, onSave, onComment }) => {
             </TouchableOpacity>
           ))}
         </View>
-      )}
+      ) : null}
 
       <View style={styles.postActions}>
         <TouchableOpacity style={styles.actionBtn} onPress={() => onLike(post.id)}>
@@ -219,10 +219,10 @@ export default function SocialFeed({ navigation }) {
         {TABS.map(tab => (
           <TouchableOpacity
             key={tab}
-            style={[styles.tab, activeTab === tab && styles.tabActive]}
+            style={[styles.tab, activeTab === tab ? styles.tabActive : null]}
             onPress={() => setActiveTab(tab)}
           >
-            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+            <Text style={[styles.tabText, activeTab === tab ? styles.tabTextActive : null]}>{tab}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -274,9 +274,9 @@ export default function SocialFeed({ navigation }) {
               onComment={handleComment}
             />
           )}
-          ListHeaderComponent={renderHeader}
-          ListFooterComponent={renderFooter}
-          ListEmptyComponent={renderEmpty}
+          ListHeaderComponent={renderHeader()}
+          ListFooterComponent={renderFooter()}
+          ListEmptyComponent={renderEmpty()}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
           }

@@ -2,21 +2,19 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import storage, { STORAGE_KEYS } from '../../utils/storage';
+import { useAuth } from '../../context/AuthContext';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../styles/theme';
 
 export default function MedicalDisclaimerScreen({ navigation }) {
   const [accepted, setAccepted] = useState(false);
+  const { completeMedicalDisclaimer } = useAuth();
 
   const handleAccept = async () => {
     try {
-      await storage.setItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED, true);
-      // Navigate to ProfileSetup for new users
-      navigation.navigate('ProfileSetup');
+      await completeMedicalDisclaimer();
+      // Navigation happens automatically via AppNavigator
     } catch (error) {
       console.warn('Failed to save disclaimer acceptance:', error);
-      // Navigate anyway
-      navigation.navigate('ProfileSetup');
     }
   };
 

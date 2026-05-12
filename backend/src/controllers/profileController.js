@@ -116,23 +116,35 @@ class ProfileController {
         notification_settings,
       } = req.body;
 
+      logger.info(`[ProfileController] Creating profile for user ${userId}:`, { name, relationship, is_primary });
+
       if (!name?.trim()) throw new ValidationError('Name is required');
 
       // Check profile limit (max 10 profiles per user)
-      const { count } = await supabase
+      const { count, error: countError } = await supabase
         .from('health_profiles')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', userId);
+
+      if (countError) {
+        logger.error('[ProfileController] Error counting profiles:', countError);
+        throw new AppError('Failed to check profile limit', 500);
+      }
 
       if (count >= 10) throw new ValidationError('Maximum 10 profiles allowed per user');
 
       // If creating primary, unset any existing primary
       if (is_primary) {
-        await supabase
+        const { error: updateError } = await supabase
           .from('health_profiles')
           .update({ is_primary: false })
           .eq('user_id', userId)
           .eq('is_primary', true);
+        
+        if (updateError) {
+          logger.error('[ProfileController] Error unsetting existing primary:', updateError);
+          // Non-critical, but log it
+        }
       }
 
       const { data: profile, error } = await supabase
@@ -149,34 +161,43 @@ class ProfileController {
         .select()
         .single();
 
-      if (error) throw new ValidationError(error.message);
+      if (error) {
+        logger.error('[ProfileController] Error inserting profile:', error);
+        throw new ValidationError(error.message);
+      }
+
+      logger.info('[ProfileController] Profile created successfully:', profile.id);
 
       // Insert dietary restrictions
       if (dietary_restrictions?.length) {
         if (dietary_restrictions.length > 50) throw new ValidationError('Maximum 50 dietary restrictions');
-        await supabase.from('dietary_restrictions').insert(
+        const { error: dietError } = await supabase.from('dietary_restrictions').insert(
           dietary_restrictions.map((r) => ({ profile_id: profile.id, restriction_type: r, severity: 'strict' }))
         );
+        if (dietError) logger.error('[ProfileController] Error inserting dietary restrictions:', dietError);
       }
 
       // Insert allergies
       if (allergies?.length) {
         if (allergies.length > 100) throw new ValidationError('Maximum 100 allergies');
-        await supabase.from('allergies_intolerances').insert(
+        const { error: allergyError } = await supabase.from('allergies_intolerances').insert(
           allergies.map((a) => ({ profile_id: profile.id, allergy_type: a, severity: 'medium' }))
         );
+        if (allergyError) logger.error('[ProfileController] Error inserting allergies:', allergyError);
       }
 
       // Insert health conditions as health_concerns
       if (health_conditions?.length) {
         if (health_conditions.length > 50) throw new ValidationError('Maximum 50 health conditions');
-        await supabase.from('health_concerns').insert(
+        const { error: concernError } = await supabase.from('health_concerns').insert(
           health_conditions.map((c) => ({ profile_id: profile.id, concern_type: c, priority: 'medium' }))
         );
+        if (concernError) logger.error('[ProfileController] Error inserting health concerns:', concernError);
       }
 
       res.status(201).json({ status: 'success', data: profile });
     } catch (error) {
+      logger.error('[ProfileController] createProfile failed:', error);
       next(error);
     }
   }

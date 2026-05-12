@@ -100,19 +100,19 @@ export default function Login({ navigation, route }) {
 
             {/* Form Card */}
             <Card style={styles.formCard} variant="elevated">
-              {error && (
+              {!!error ? (
                 <View style={styles.errorBanner}>
                   <Ionicons name="alert-circle-outline" size={18} color={COLORS.error} />
                   <Text style={styles.errorText}>{error}</Text>
                 </View>
-              )}
+              ) : null}
 
-              {route?.params?.successMessage && (
+              {route?.params?.successMessage ? (
                 <View style={styles.successBanner}>
                   <Ionicons name="checkmark-circle-outline" size={18} color={COLORS.success} />
                   <Text style={styles.successText}>{route.params.successMessage}</Text>
                 </View>
-              )}
+              ) : null}
 
               {/* Email Input */}
               <View style={styles.inputGroup}>

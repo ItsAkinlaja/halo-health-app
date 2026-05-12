@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View } from 'react-native';
 import AuthNavigator from './AuthNavigator';
@@ -14,40 +14,32 @@ import { COLORS } from '../styles/theme';
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
-  const { user, isLoading, isFirstTime, needsDisclaimer } = useAuth();
+  const { user, isLoading, isFirstTime, needsDisclaimer, needsProfileSetup } = useAuth();
   const { setUser } = useAppContext();
-  const [navigationKey, setNavigationKey] = React.useState(0);
-  const [needsProfileSetup, setNeedsProfileSetup] = React.useState(false);
+  const [navigationKey, setNavigationKey] = useState(0);
   // Track previous route so we only remount the navigator when the destination actually changes
-  const prevRouteRef = React.useRef(null);
+  const prevRouteRef = useRef(null);
 
   // Sync user from AuthContext to AppContext
   useEffect(() => {
-    setUser(user);
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Check if profile setup is needed (only when user changes and loading is done)
-  useEffect(() => {
-    if (!user || isLoading) return;
-    let cancelled = false;
-    const checkProfileSetup = async () => {
-      const profileSetupCompleted = await storage.getItem(STORAGE_KEYS.PROFILE_SETUP_COMPLETED);
-      if (!cancelled) setNeedsProfileSetup(!profileSetupCompleted);
-    };
-    checkProfileSetup();
-    return () => { cancelled = true; };
-  }, [user?.id, isLoading]); // depend on user.id, not the whole object
+    if (user) {
+      setUser(user);
+    }
+  }, [user, setUser]);
 
   // Only remount the navigator when the TARGET ROUTE changes — not on every loading tick
   useEffect(() => {
     if (isLoading) return; // wait until loading is settled
     const nextRoute = !user
       ? 'Auth'
+      : isFirstTime
+      ? 'Onboarding'
       : needsDisclaimer
       ? 'MedicalDisclaimer'
       : needsProfileSetup
       ? 'ProfileSetup'
       : 'MainApp';
+    
     if (prevRouteRef.current !== null && prevRouteRef.current !== nextRoute) {
       setNavigationKey(prev => prev + 1);
     }
@@ -64,6 +56,7 @@ export default function AppNavigator() {
 
   const getInitialRoute = () => {
     if (!user) return 'Auth';
+    if (isFirstTime) return 'Onboarding';
     if (needsDisclaimer) return 'MedicalDisclaimer';
     if (needsProfileSetup) return 'ProfileSetup';
     return 'MainApp';
@@ -73,15 +66,26 @@ export default function AppNavigator() {
 
   return (
     <Stack.Navigator
-      key={`nav-${navigationKey}-${user?.id || 'guest'}`}
-      initialRouteName={initialRouteName}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{ 
+        headerShown: false,
+        animation: 'fade_from_bottom'
+      }}
     >
-      <Stack.Screen name="Auth" component={AuthNavigator} />
-      <Stack.Screen name="Onboarding" component={OnboardingNavigator} />
-      <Stack.Screen name="MedicalDisclaimer" component={MedicalDisclaimerScreen} />
-      <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
-      <Stack.Screen name="MainApp" component={MainNavigator} />
+      {!user ? (
+        <Stack.Screen 
+          name="Auth" 
+          component={AuthNavigator} 
+          options={{ animationTypeForReplace: 'pop' }}
+        />
+      ) : isFirstTime ? (
+        <Stack.Screen name="Onboarding" component={OnboardingNavigator} />
+      ) : needsDisclaimer ? (
+        <Stack.Screen name="MedicalDisclaimer" component={MedicalDisclaimerScreen} />
+      ) : needsProfileSetup ? (
+        <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
+      ) : (
+        <Stack.Screen name="MainApp" component={MainNavigator} />
+      )}
     </Stack.Navigator>
   );
 }
