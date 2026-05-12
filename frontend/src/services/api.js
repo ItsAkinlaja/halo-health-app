@@ -1,9 +1,6 @@
 import { supabase } from './supabase';
-import { Platform } from 'react-native';
 
-// Use env var. Fallback differs per platform:
-//   Android emulator: 10.0.2.2 maps to host localhost
-//   iOS simulator / web: localhost works directly
+// Use EXPO_PUBLIC_API_URL when set; default to the live Railway backend.
 const API_URL = process.env.EXPO_PUBLIC_API_URL ||
   'https://halo-health-app-production.up.railway.app';
 
@@ -72,7 +69,7 @@ class ApiClient {
             // Retry with the fresh token
             return this.request(endpoint, options, true);
           }
-          // Refresh failed — sign the user out so they get the login screen
+          // Refresh failed, so sign the user out and return them to login.
           await supabase.auth.signOut();
         }
         

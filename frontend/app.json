@@ -72,6 +72,6 @@
     "runtimeVersion": "54.0.0",
     "updates": {
       "fallbackToCacheTimeout": 0
-    },
+    }
   }
 }
