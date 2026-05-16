@@ -35,6 +35,15 @@ import Privacy from '../screens/settings/Privacy';
 import HelpCenter from '../screens/settings/HelpCenter';
 import ContactSupport from '../screens/settings/ContactSupport';
 import Terms from '../screens/settings/Terms';
+import NewsFeed from '../screens/main/NewsFeed';
+import GroceryExplorer from '../screens/main/GroceryExplorer';
+import PantryTracker from '../screens/main/PantryTracker';
+import ProductSubmission from '../screens/main/ProductSubmission';
+import CommunityGroups from '../screens/main/CommunityGroups';
+import Wallet from '../screens/profile/Wallet';
+import HomeEnvironmentAudit from '../screens/main/HomeEnvironmentAudit';
+import Challenges from '../screens/main/Challenges';
+import ShoppingListUI from '../screens/main/ShoppingListUI';
 import { COLORS, TYPOGRAPHY, SHADOWS, RADIUS, SPACING } from '../styles/theme';
 
 const Tab = createBottomTabNavigator();
@@ -161,6 +170,17 @@ const MainNavigator = () => {
       
       {/* Meal Planner Screens */}
       <Stack.Screen name="MealDetails" component={MealDetails} />
+      
+      {/* Newly Added Screens */}
+      <Stack.Screen name="NewsFeed" component={NewsFeed} />
+      <Stack.Screen name="GroceryExplorer" component={GroceryExplorer} />
+      <Stack.Screen name="PantryTracker" component={PantryTracker} />
+      <Stack.Screen name="ProductSubmission" component={ProductSubmission} />
+      <Stack.Screen name="CommunityGroups" component={CommunityGroups} />
+      <Stack.Screen name="Wallet" component={Wallet} />
+      <Stack.Screen name="HomeEnvironmentAudit" component={HomeEnvironmentAudit} />
+      <Stack.Screen name="Challenges" component={Challenges} />
+      <Stack.Screen name="ShoppingList" component={ShoppingListUI} />
     </Stack.Navigator>
   );
 };

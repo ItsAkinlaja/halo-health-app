@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
+import * as Speech from 'expo-speech';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../styles/theme';
 import { scanService } from '../../services/scanService';
 import { productService } from '../../services/productService';
@@ -69,6 +70,7 @@ export default function Scanner({ navigation }) {
     
     setScanned(true);
     setScanning(true);
+    Speech.speak('Analyzing product...', { language: 'en-US', pitch: 1.1, rate: 1.1 });
 
     try {
       // Validate barcode
@@ -116,6 +118,7 @@ export default function Scanner({ navigation }) {
 
     } catch (error) {
       console.warn('Barcode scan error:', error.message);
+      Speech.speak('Unable to scan product.', { language: 'en-US' });
       Alert.alert(
         'Scan Failed',
         error.message || 'Unable to scan product. Please try again.',
@@ -133,12 +136,14 @@ export default function Scanner({ navigation }) {
     if (!searchQuery.trim()) return;
     
     setScanning(true);
+    Speech.speak('Searching...', { language: 'en-US', pitch: 1.1, rate: 1.1 });
 
     try {
       // Search for products
       const results = await productService.searchProducts(searchQuery);
       
       if (results.length === 0) {
+        Speech.speak('No results found.', { language: 'en-US' });
         Alert.alert('No Results', 'No products found matching your search.');
         setScanning(false);
         return;

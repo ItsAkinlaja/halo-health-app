@@ -72,6 +72,11 @@
     "runtimeVersion": "54.0.0",
     "updates": {
       "fallbackToCacheTimeout": 0
+    },
+    "extra": {
+      "eas": {
+        "projectId": "449eace8-bbda-41ce-a293-15e632f915ea"
+      }
     }
   }
 }

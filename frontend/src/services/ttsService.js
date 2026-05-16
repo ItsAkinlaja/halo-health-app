@@ -1,34 +1,33 @@
-import { api } from './api';
-import { Audio } from 'expo-av';
+import * as Speech from 'expo-speech';
 
 export const ttsService = {
   async getProductAudio(analysis) {
-    const response = await api.post('/scans/audio', {
-      analysis
-    }, {
-      responseType: 'blob'
-    });
-    return response.data;
+    // We don't need a blob anymore, we just return the text
+    return analysis.summary || "No analysis available.";
   },
 
-  async playAudio(audioBlob) {
-    const sound = new Audio.Sound();
-    
-    try {
-      const uri = URL.createObjectURL(audioBlob);
-      await sound.loadAsync({ uri });
-      await sound.playAsync();
-      return sound;
-    } catch (error) {
-      console.error('Error playing audio:', error);
-      throw error;
+  async playAudio(textToSpeak) {
+    // If it's playing, stop first
+    const isSpeaking = await Speech.isSpeakingAsync();
+    if (isSpeaking) {
+      await Speech.stop();
     }
+
+    Speech.speak(textToSpeak, {
+      language: 'en-US',
+      pitch: 1.0,
+      rate: 1.0,
+    });
+    
+    // We return a dummy object to satisfy AudioPlayer expectations for 'sound'
+    return {
+      setOnPlaybackStatusUpdate: () => {},
+      stopAsync: async () => await Speech.stop(),
+      unloadAsync: async () => {},
+    };
   },
 
   async stopAudio(sound) {
-    if (sound) {
-      await sound.stopAsync();
-      await sound.unloadAsync();
-    }
+    await Speech.stop();
   },
 };

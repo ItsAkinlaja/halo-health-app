@@ -45,10 +45,29 @@ export function AuthProvider({ children }) {
             
             await storage.setItem(STORAGE_KEYS.USER_SESSION, session);
             
-            const onboardingCompleted = await storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
-            const disclaimerAccepted = await storage.getItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED);
-            const profileSetupCompleted = await storage.getItem(STORAGE_KEYS.PROFILE_SETUP_COMPLETED);
+            let onboardingCompleted = await storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
+            let disclaimerAccepted = await storage.getItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED);
+            let profileSetupCompleted = await storage.getItem(STORAGE_KEYS.PROFILE_SETUP_COMPLETED);
             
+            // If local storage says they haven't finished setup, verify with backend
+            if (!profileSetupCompleted) {
+              try {
+                // profileService is imported at top
+                const { profileService } = require('../services/profileService');
+                const profiles = await profileService.getProfiles(session.user.id);
+                if (profiles && profiles.length > 0) {
+                  onboardingCompleted = true;
+                  disclaimerAccepted = true;
+                  profileSetupCompleted = true;
+                  await storage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, true);
+                  await storage.setItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED, true);
+                  await storage.setItem(STORAGE_KEYS.PROFILE_SETUP_COMPLETED, true);
+                }
+              } catch (err) {
+                console.warn('[AuthContext] Failed to fetch backend profiles on login', err.message);
+              }
+            }
+
             setIsFirstTime(!onboardingCompleted);
             setNeedsDisclaimer(onboardingCompleted && !disclaimerAccepted);
             setNeedsProfileSetup(onboardingCompleted && disclaimerAccepted && !profileSetupCompleted);
@@ -79,10 +98,27 @@ export function AuthProvider({ children }) {
         setUser(session.user);
         await storage.setItem(STORAGE_KEYS.USER_SESSION, session);
         
-        const onboardingCompleted = await storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
-        const disclaimerAccepted = await storage.getItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED);
-        const profileSetupCompleted = await storage.getItem(STORAGE_KEYS.PROFILE_SETUP_COMPLETED);
+        let onboardingCompleted = await storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
+        let disclaimerAccepted = await storage.getItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED);
+        let profileSetupCompleted = await storage.getItem(STORAGE_KEYS.PROFILE_SETUP_COMPLETED);
         
+        if (!profileSetupCompleted) {
+          try {
+            const { profileService } = require('../services/profileService');
+            const profiles = await profileService.getProfiles(session.user.id);
+            if (profiles && profiles.length > 0) {
+              onboardingCompleted = true;
+              disclaimerAccepted = true;
+              profileSetupCompleted = true;
+              await storage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, true);
+              await storage.setItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED, true);
+              await storage.setItem(STORAGE_KEYS.PROFILE_SETUP_COMPLETED, true);
+            }
+          } catch (err) {
+            console.warn('[AuthContext] Failed to fetch backend profiles on checkSession', err.message);
+          }
+        }
+
         setIsFirstTime(!onboardingCompleted);
         setNeedsDisclaimer(onboardingCompleted && !disclaimerAccepted);
         setNeedsProfileSetup(onboardingCompleted && disclaimerAccepted && !profileSetupCompleted);

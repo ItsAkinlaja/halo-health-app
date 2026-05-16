@@ -1,48 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ttsService } from '../../services/ttsService';
+import * as Speech from 'expo-speech';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../styles/theme';
 
 export default function AudioPlayer({ analysis }) {
-  const [loading, setLoading] = useState(false);
   const [playing, setPlaying] = useState(false);
-  const [sound, setSound] = useState(null);
 
   useEffect(() => {
     return () => {
-      if (sound) {
-        ttsService.stopAudio(sound);
-      }
+      Speech.stop();
     };
-  }, [sound]);
+  }, []);
 
   const handlePlay = async () => {
     try {
-      if (playing && sound) {
-        await ttsService.stopAudio(sound);
-        setSound(null);
+      const isSpeaking = await Speech.isSpeakingAsync();
+      
+      if (isSpeaking) {
+        await Speech.stop();
         setPlaying(false);
         return;
       }
 
-      setLoading(true);
-      const audioBlob = await ttsService.getProductAudio(analysis);
-      const newSound = await ttsService.playAudio(audioBlob);
+      const textToSpeak = analysis?.summary || "No analysis available.";
       
-      newSound.setOnPlaybackStatusUpdate((status) => {
-        if (status.didJustFinish) {
-          setPlaying(false);
-          setSound(null);
-        }
+      setPlaying(true);
+      Speech.speak(textToSpeak, {
+        language: 'en-US',
+        pitch: 1.0,
+        rate: 1.0,
+        onDone: () => setPlaying(false),
+        onStopped: () => setPlaying(false),
+        onError: () => setPlaying(false),
       });
 
-      setSound(newSound);
-      setPlaying(true);
     } catch (error) {
       console.error('Error playing audio:', error);
-    } finally {
-      setLoading(false);
+      setPlaying(false);
     }
   };
 
@@ -50,19 +45,14 @@ export default function AudioPlayer({ analysis }) {
     <TouchableOpacity
       style={styles.button}
       onPress={handlePlay}
-      disabled={loading}
     >
-      {loading ? (
-        <ActivityIndicator size="small" color={COLORS.primary} />
-      ) : (
-        <Ionicons
-          name={playing ? 'stop-circle' : 'play-circle'}
-          size={24}
-          color={COLORS.primary}
-        />
-      )}
+      <Ionicons
+        name={playing ? 'stop-circle' : 'play-circle'}
+        size={24}
+        color={COLORS.primary}
+      />
       <Text style={styles.text}>
-        {loading ? 'Loading...' : playing ? 'Stop' : 'Listen to Results'}
+        {playing ? 'Stop Listening' : 'Listen to Results'}
       </Text>
     </TouchableOpacity>
   );

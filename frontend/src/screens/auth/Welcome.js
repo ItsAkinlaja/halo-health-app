@@ -41,7 +41,7 @@ export default function Welcome({ navigation }) {
     if (hasVisited) {
       navigation.navigate('Login');
     } else {
-      navigation.navigate('LanguageSelection');
+      navigation.navigate('OnboardingFlow');
     }
   };
 

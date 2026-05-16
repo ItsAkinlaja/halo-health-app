@@ -3,7 +3,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View } from 'react-native';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
-import OnboardingNavigator from './OnboardingNavigator';
+import OnboardingFlow from '../screens/onboarding/OnboardingFlow';
+import { OnboardingProvider } from '../context/OnboardingContext';
 import MedicalDisclaimerScreen from '../screens/common/MedicalDisclaimerScreen';
 import ProfileSetupScreen from '../screens/common/ProfileSetup';
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +13,12 @@ import storage, { STORAGE_KEYS } from '../utils/storage';
 import { COLORS } from '../styles/theme';
 
 const Stack = createNativeStackNavigator();
+
+const OnboardingWrapper = (props) => (
+  <OnboardingProvider>
+    <OnboardingFlow {...props} />
+  </OnboardingProvider>
+);
 
 export default function AppNavigator() {
   const { user, isLoading, isFirstTime, needsDisclaimer, needsProfileSetup } = useAuth();
@@ -78,7 +85,7 @@ export default function AppNavigator() {
           options={{ animationTypeForReplace: 'pop' }}
         />
       ) : isFirstTime ? (
-        <Stack.Screen name="Onboarding" component={OnboardingNavigator} />
+        <Stack.Screen name="Onboarding" component={OnboardingWrapper} />
       ) : needsDisclaimer ? (
         <Stack.Screen name="MedicalDisclaimer" component={MedicalDisclaimerScreen} />
       ) : needsProfileSetup ? (
