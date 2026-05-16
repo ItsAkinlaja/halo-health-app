@@ -117,15 +117,26 @@ export default function SocialFeed({ navigation }) {
   const [hasMore, setHasMore] = useState(true);
   const PAGE_SIZE = 10;
 
+  const isMounted = React.useRef(true);
+
+  React.useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   const loadPosts = useCallback(async (isInitial = true) => {
     if (!isInitial && (!hasMore || loadingMore)) return;
 
     try {
       if (isInitial) {
-        setLoading(true);
-        setOffset(0);
+        if (isMounted.current) {
+          setLoading(true);
+          setOffset(0);
+        }
       } else {
-        setLoadingMore(true);
+        if (isMounted.current) setLoadingMore(true);
       }
 
       const filter = activeTab === 'Following' ? 'following' : 'all';
@@ -134,6 +145,8 @@ export default function SocialFeed({ navigation }) {
       const response = await socialService.getFeed(filter, PAGE_SIZE, currentOffset);
       const newPosts = response.posts || [];
       
+      if (!isMounted.current) return;
+
       if (isInitial) {
         setPosts(newPosts);
       } else {
@@ -144,11 +157,13 @@ export default function SocialFeed({ navigation }) {
       setOffset(currentOffset + PAGE_SIZE);
     } catch (error) {
       console.error('Failed to load posts:', error);
-      if (isInitial) Alert.alert('Error', 'Failed to load community posts');
+      if (isInitial && isMounted.current) Alert.alert('Error', 'Failed to load community posts');
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
-      setRefreshing(false);
+      if (isMounted.current) {
+        setLoading(false);
+        setLoadingMore(false);
+        setRefreshing(false);
+      }
     }
   }, [activeTab, offset, hasMore, loadingMore]);
 

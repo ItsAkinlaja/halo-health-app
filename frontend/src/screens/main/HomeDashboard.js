@@ -45,6 +45,15 @@ export default function HomeDashboard({ navigation }) {
   const [showDisclaimerBanner, setShowDisclaimerBanner] = useState(false);
   const scrollY = useRef(new Animated.Value(0)).current;
 
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   useEffect(() => {
     loadProfiles();
   }, [user]);
@@ -59,8 +68,9 @@ export default function HomeDashboard({ navigation }) {
 
     try {
       const response = await profileService.getProfiles(user.id);
+      if (!isMounted.current) return;
       if (response.status === 'success' && response.data) {
-        setProfiles(response.data);
+        setProfiles(response.data || []);
         
         // Load saved active profile ID
         const savedProfileId = await storage.getItem(STORAGE_KEYS.ACTIVE_PROFILE_ID);
@@ -90,20 +100,22 @@ export default function HomeDashboard({ navigation }) {
 
   const loadDashboardData = async () => {
     if (!activeProfile?.id) {
-      setLoading(false);
+      if (isMounted.current) setLoading(false);
       return;
     }
 
     try {
-      setLoading(true);
+      if (isMounted.current) setLoading(true);
 
       const scansData = await scanService.getScanHistory(activeProfile.id, {
         limit: 5,
         offset: 0,
       });
+      if (!isMounted.current) return;
       setRecentScans(scansData || []);
 
       const statsData = await scanService.getScanStats(activeProfile.id, '30d');
+      if (!isMounted.current) return;
       setScanStats(statsData);
 
       if (scansData && scansData.length > 0) {
@@ -115,22 +127,24 @@ export default function HomeDashboard({ navigation }) {
 
       if (user?.id) {
         const { count } = await notificationService.getUnreadCount(user.id);
-        setUnreadCount(count || 0);
+        if (isMounted.current) setUnreadCount(count || 0);
       }
 
     } catch (error) {
       console.warn('Failed to load dashboard data:', error.message);
-      setHealthScore(0);
-      setRecentScans([]);
+      if (isMounted.current) {
+        setHealthScore(0);
+        setRecentScans([]);
+      }
     } finally {
-      setLoading(false);
+      if (isMounted.current) setLoading(false);
     }
   };
 
   const checkDisclaimerStatus = async () => {
     try {
       const disclaimerAccepted = await storage.getItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED);
-      setShowDisclaimerBanner(!disclaimerAccepted);
+      if (isMounted.current) setShowDisclaimerBanner(!disclaimerAccepted);
     } catch (error) {
       console.warn('Failed to check disclaimer status:', error);
     }
