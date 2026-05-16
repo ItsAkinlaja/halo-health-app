@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const pantryController = require('../controllers/pantryController');
-const { protect } = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/auth');
 
-router.get('/', protect, pantryController.getPantry);
-router.post('/', protect, pantryController.addPantryItem);
-router.delete('/:id', protect, pantryController.removePantryItem);
+router.get('/', authMiddleware, pantryController.getPantry);
+router.post('/', authMiddleware, pantryController.addPantryItem);
+router.delete('/:id', authMiddleware, pantryController.removePantryItem);
 
 module.exports = router;
