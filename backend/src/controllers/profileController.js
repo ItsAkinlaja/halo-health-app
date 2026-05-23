@@ -256,14 +256,28 @@ class ProfileController {
       const { profileId } = req.params;
       await assertProfileOwner(profileId, req.user.id);
 
-      // Prevent deleting primary profile
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('health_profiles')
         .select('is_primary')
         .eq('id', profileId)
         .single();
 
-      if (profile?.is_primary) throw new ValidationError('Cannot delete primary profile');
+      if (profileError) throw new ValidationError(profileError.message);
+
+      let replacementProfileId = null;
+
+      if (profile?.is_primary) {
+        const { data: remainingProfiles, error: remainingError } = await supabase
+          .from('health_profiles')
+          .select('id')
+          .eq('user_id', req.user.id)
+          .neq('id', profileId)
+          .order('created_at', { ascending: true });
+
+        if (remainingError) throw new ValidationError(remainingError.message);
+
+        replacementProfileId = remainingProfiles?.[0]?.id || null;
+      }
 
       const { error } = await supabase
         .from('health_profiles')
@@ -271,6 +285,19 @@ class ProfileController {
         .eq('id', profileId);
 
       if (error) throw new ValidationError(error.message);
+
+      if (replacementProfileId) {
+        const { error: promoteError } = await supabase
+          .from('health_profiles')
+          .update({ is_primary: true })
+          .eq('id', replacementProfileId)
+          .eq('user_id', req.user.id);
+
+        if (promoteError) {
+          logger.warn('[ProfileController] Failed to promote replacement primary profile:', promoteError.message);
+        }
+      }
+
       res.json({ status: 'success', message: 'Profile deleted' });
     } catch (error) {
       next(error);

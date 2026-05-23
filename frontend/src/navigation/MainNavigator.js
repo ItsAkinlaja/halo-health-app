@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeDashboard from '../screens/main/HomeDashboard';
 import Scanner from '../screens/main/Scanner';
+import Explore from '../screens/main/Explore';
 import SocialFeed from '../screens/main/SocialFeed';
 import MealPlanner from '../screens/main/MealPlanner';
 import Profile from '../screens/main/Profile';
@@ -90,12 +91,12 @@ function HomeTabs() {
         }}
       />
       <Tab.Screen
-        name="MealsTab"
-        component={MealPlanner}
+        name="ExploreTab"
+        component={Explore}
         options={{
-          tabBarLabel: 'Meals',
+          tabBarLabel: 'Explore',
           tabBarIcon: ({ focused, color }) => (
-            <Ionicons name={focused ? 'restaurant' : 'restaurant-outline'} size={22} color={color} />
+            <Ionicons name={focused ? 'compass' : 'compass-outline'} size={22} color={color} />
           ),
         }}
       />
@@ -147,6 +148,12 @@ const MainNavigator = () => {
       <Stack.Screen name="ScanHistory" component={ScanHistory} />
       <Stack.Screen name="Scanner" component={Scanner} />
       <Stack.Screen name="Meals" component={MealPlanner} />
+      <Stack.Screen name="BookDoctor" component={PlaceholderScreen} />
+      <Stack.Screen name="PersonalCare" component={PlaceholderScreen} />
+      <Stack.Screen name="BabyKids" component={PlaceholderScreen} />
+      <Stack.Screen name="PetFood" component={PlaceholderScreen} />
+      <Stack.Screen name="RecapsWrapped" component={PlaceholderScreen} />
+      <Stack.Screen name="Referrals" component={PlaceholderScreen} />
       <Stack.Screen name="Debug" component={DebugScreen} />
       
       {/* Settings Screens */}

@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../../context/AppContext';
 import { profileService } from '../../services/profileService';
+import { api } from '../../services/api';
 import storage, { STORAGE_KEYS } from '../../utils/storage';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../styles/theme';
 
@@ -118,6 +119,8 @@ export default function FamilyProfiles({ navigation }) {
         }
       }
 
+      api.invalidateCache('/api/profiles');
+
       await loadProfiles();
 
       setShowAddModal(false);
@@ -143,20 +146,14 @@ export default function FamilyProfiles({ navigation }) {
             try {
               const deletingActive = activeProfile?.id === profile.id;
               await profileService.deleteProfile(profile.id);
+              api.invalidateCache('/api/profiles');
+
               if (deletingActive) {
-                const refreshedProfiles = await profileService.getProfiles(user.id);
-                const remainingProfiles = (refreshedProfiles || []).filter((item) => item.id !== profile.id);
-                setProfiles(remainingProfiles);
-                const nextProfile = remainingProfiles.find((item) => item.is_primary) || remainingProfiles[0] || null;
-                setActiveProfile(nextProfile);
-                if (nextProfile?.id) {
-                  await storage.setItem(STORAGE_KEYS.ACTIVE_PROFILE_ID, nextProfile.id);
-                } else {
-                  await storage.removeItem(STORAGE_KEYS.ACTIVE_PROFILE_ID);
-                }
-              } else {
-                await loadProfiles();
+                setActiveProfile(null);
+                await storage.removeItem(STORAGE_KEYS.ACTIVE_PROFILE_ID);
               }
+
+              await loadProfiles();
 
               Alert.alert('Success', 'Profile deleted successfully');
             } catch (error) {

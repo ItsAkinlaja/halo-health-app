@@ -16,7 +16,7 @@ import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../styles/theme
 const { width: W } = Dimensions.get('window');
 
 export default function MealPlanner({ navigation }) {
-  const { activeProfile } = useAppContext();
+  const { activeProfile, profiles, setActiveProfile } = useAppContext();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -26,15 +26,31 @@ export default function MealPlanner({ navigation }) {
   const [showAddMeal, setShowAddMeal] = useState(false);
 
   useEffect(() => {
-    if (activeProfile?.id) {
+    const mealProfile = resolveMealProfile();
+    if (mealProfile?.id) {
       loadMeals();
     } else {
       setLoading(false);
     }
-  }, [activeProfile, selectedDate]);
+  }, [activeProfile, profiles, selectedDate]);
+
+  const resolveMealProfile = () => {
+    if (activeProfile?.id && profiles.some((profile) => profile.id === activeProfile.id)) {
+      return activeProfile;
+    }
+
+    const fallbackProfile = profiles.find((profile) => profile.is_primary) || profiles[0] || null;
+
+    if (fallbackProfile?.id && !activeProfile?.id) {
+      setActiveProfile(fallbackProfile);
+    }
+
+    return fallbackProfile;
+  };
 
   const loadMeals = async () => {
-    if (!activeProfile?.id) {
+    const mealProfile = resolveMealProfile();
+    if (!mealProfile?.id) {
       setLoading(false);
       return;
     }
@@ -43,8 +59,8 @@ export default function MealPlanner({ navigation }) {
       setLoading(true);
       const dateStr = selectedDate.toISOString().split('T')[0];
       const [mealsData, nutritionData] = await Promise.all([
-        mealService.getMealsByDate(activeProfile.id, dateStr),
-        mealService.getNutritionSummary(activeProfile.id, dateStr, dateStr),
+        mealService.getMealsByDate(mealProfile.id, dateStr),
+        mealService.getNutritionSummary(mealProfile.id, dateStr, dateStr),
       ]);
       setMeals(mealsData || []);
       setNutritionSummary(nutritionData);
@@ -62,11 +78,12 @@ export default function MealPlanner({ navigation }) {
   };
 
   const handleGeneratePlan = async () => {
-    if (!activeProfile?.id) return;
+    const mealProfile = resolveMealProfile();
+    if (!mealProfile?.id) return;
 
     try {
       setGenerating(true);
-      await mealService.generateMealPlan(activeProfile.id, {
+      await mealService.generateMealPlan(mealProfile.id, {
         startDate: selectedDate.toISOString().split('T')[0],
         days: 7,
       });
