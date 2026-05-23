@@ -105,6 +105,10 @@ class ProductHealthScoreService {
 
   applyPersonalization(baseScore, product, profile) {
     let score = baseScore;
+
+    if (profile?.member_type === 'pet') {
+      return this.applyPetPersonalization(score, product, profile);
+    }
     
     // Check dietary restrictions
     if (profile.dietary_restrictions) {
@@ -154,6 +158,41 @@ class ProductHealthScoreService {
       }
     }
     
+    return Math.max(0, Math.min(100, score));
+  }
+
+  applyPetPersonalization(baseScore, product, profile) {
+    let score = baseScore;
+    const ingredients = [
+      ...(product.ingredients || []).map(ing => (typeof ing === 'string' ? ing : ing?.name || '')),
+      ...(product.allergens_present || []),
+      ...(product.toxins_detected || []),
+    ].join(' ').toLowerCase();
+
+    const petHazards = [
+      { terms: ['chocolate', 'cocoa'], weight: 45, label: 'chocolate' },
+      { terms: ['xylitol', 'birch sugar'], weight: 50, label: 'xylitol' },
+      { terms: ['grape', 'raisin', 'currant'], weight: 45, label: 'grapes or raisins' },
+      { terms: ['onion', 'garlic', 'leek', 'chive'], weight: 35, label: 'allium ingredients' },
+      { terms: ['alcohol', 'ethanol'], weight: 60, label: 'alcohol' },
+      { terms: ['caffeine', 'coffee', 'tea'], weight: 35, label: 'caffeine' },
+      { terms: ['macadamia'], weight: 40, label: 'macadamia nuts' },
+    ];
+
+    petHazards.forEach((hazard) => {
+      if (hazard.terms.some(term => ingredients.includes(term))) {
+        score -= hazard.weight;
+      }
+    });
+
+    if (profile.pet_type?.toLowerCase() === 'cat' && ingredients.includes('milk')) {
+      score -= 10;
+    }
+
+    if (profile.pet_type?.toLowerCase() === 'dog' && ingredients.includes('salt')) {
+      score -= 10;
+    }
+
     return Math.max(0, Math.min(100, score));
   }
 
@@ -281,6 +320,10 @@ class ProductHealthScoreService {
 
   generateWarnings(product, profile) {
     const warnings = [];
+
+    if (profile?.member_type === 'pet') {
+      warnings.push(...this.generatePetWarnings(product, profile));
+    }
     
     // Allergen warnings
     if (profile?.allergies_intolerances && product.allergens_present) {
@@ -341,6 +384,37 @@ class ProductHealthScoreService {
       });
     }
     
+    return warnings;
+  }
+
+  generatePetWarnings(product, profile) {
+    const warnings = [];
+    const ingredients = [
+      ...(product.ingredients || []).map(ing => (typeof ing === 'string' ? ing : ing?.name || '')),
+      ...(product.allergens_present || []),
+      ...(product.toxins_detected || []),
+    ].join(' ').toLowerCase();
+
+    const petHazards = [
+      { terms: ['chocolate', 'cocoa'], severity: 'high', label: 'chocolate' },
+      { terms: ['xylitol', 'birch sugar'], severity: 'high', label: 'xylitol' },
+      { terms: ['grape', 'raisin', 'currant'], severity: 'high', label: 'grapes or raisins' },
+      { terms: ['onion', 'garlic', 'leek', 'chive'], severity: 'high', label: 'allium ingredients' },
+      { terms: ['alcohol', 'ethanol'], severity: 'high', label: 'alcohol' },
+      { terms: ['caffeine', 'coffee', 'tea'], severity: 'medium', label: 'caffeine' },
+      { terms: ['macadamia'], severity: 'high', label: 'macadamia nuts' },
+    ];
+
+    petHazards.forEach((hazard) => {
+      if (hazard.terms.some(term => ingredients.includes(term))) {
+        warnings.push({
+          type: 'pet_toxin',
+          severity: hazard.severity,
+          message: `Potentially unsafe for ${profile.pet_type || 'pet'}: ${hazard.label}`,
+        });
+      }
+    });
+
     return warnings;
   }
 

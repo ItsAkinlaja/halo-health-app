@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, CheckBox, Platform 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY, SHADOWS, RADIUS, SPACING } from '../../styles/theme';
+import { useAppContext } from '../../context/AppContext';
+import { ProfileSelector } from '../../components/common/ProfileSelector';
 
 const MOCK_LIST = [
   { id: '1', name: 'Organic Spinach', category: 'Produce', checked: false },
@@ -11,6 +13,7 @@ const MOCK_LIST = [
 ];
 
 export default function ShoppingListUI({ navigation }) {
+  const { activeProfile, profiles, setActiveProfile } = useAppContext();
   const [items, setItems] = useState(MOCK_LIST);
 
   const toggleItem = (id) => {
@@ -38,6 +41,14 @@ export default function ShoppingListUI({ navigation }) {
         <Text style={styles.title}>Shopping List</Text>
       </View>
 
+      <View style={styles.profileSelectorWrap}>
+        <ProfileSelector
+          profiles={profiles}
+          activeProfile={activeProfile}
+          onProfileChange={setActiveProfile}
+        />
+      </View>
+
       <FlatList
         data={items}
         keyExtractor={item => item.id}
@@ -55,6 +66,7 @@ export default function ShoppingListUI({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: { flexDirection: 'row', alignItems: 'center', padding: SPACING.md, backgroundColor: COLORS.surface },
+  profileSelectorWrap: { paddingHorizontal: SPACING.md, paddingTop: SPACING.sm },
   backBtn: { padding: SPACING.xs, marginRight: SPACING.sm },
   title: { fontSize: TYPOGRAPHY.lg, fontWeight: 'bold' },
   list: { padding: SPACING.md },

@@ -42,7 +42,9 @@ router.get('/', [
 
 router.post('/', [
   body('name').trim().notEmpty().withMessage('Name is required').isLength({ max: 100 }).withMessage('Name too long'),
-  body('relationship').optional().isIn(['self', 'spouse', 'child', 'parent', 'sibling', 'other']).withMessage('Invalid relationship'),
+  body('relationship').optional().isIn(['self', 'spouse', 'child', 'parent', 'sibling', 'other', 'pet']).withMessage('Invalid relationship'),
+  body('member_type').optional().isIn(['person', 'pet']).withMessage('Invalid member type'),
+  body('pet_type').optional().trim().isLength({ min: 1, max: 50 }).withMessage('Pet type must be 1-50 characters'),
   body('age').optional().isInt({ min: 0, max: 150 }).withMessage('Age must be 0-150'),
   body('gender').optional().isIn(['male', 'female', 'other', 'prefer-not-to-say']).withMessage('Invalid gender'),
   body('is_primary').optional().isBoolean().withMessage('is_primary must be boolean'),
@@ -57,7 +59,9 @@ router.post('/', [
 router.put('/:profileId', [
   param('profileId').isUUID().withMessage('Invalid profile ID format'),
   body('name').optional().trim().isLength({ min: 1, max: 100 }).withMessage('Name must be 1-100 characters'),
-  body('relationship').optional().isIn(['self', 'spouse', 'child', 'parent', 'sibling', 'other']).withMessage('Invalid relationship'),
+  body('relationship').optional().isIn(['self', 'spouse', 'child', 'parent', 'sibling', 'other', 'pet']).withMessage('Invalid relationship'),
+  body('member_type').optional().isIn(['person', 'pet']).withMessage('Invalid member type'),
+  body('pet_type').optional().trim().isLength({ min: 1, max: 50 }).withMessage('Pet type must be 1-50 characters'),
   body('age').optional().isInt({ min: 0, max: 150 }).withMessage('Age must be 0-150'),
   body('gender').optional().isIn(['male', 'female', 'other', 'prefer-not-to-say']).withMessage('Invalid gender'),
   body('health_goals').optional().isArray().withMessage('health_goals must be an array'),

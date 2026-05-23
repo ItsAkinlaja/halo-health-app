@@ -6,17 +6,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { ScoreRing } from '../../components/common/ScoreRing';
 import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, getScoreColor } from '../../styles/theme';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../styles/theme';
 
 const { width: W } = Dimensions.get('window');
 
 export default function Profile({ navigation }) {
   const { user, activeProfile } = useAppContext();
   const { signOut } = useAuth();
-  const [healthScore] = useState(72);
 
   const handleSignOut = async () => {
     try {
@@ -37,13 +35,6 @@ export default function Profile({ navigation }) {
     { label: 'Products Scanned', value: '0', icon: 'scan-outline' },
     { label: 'Clean Swaps Made', value: '0', icon: 'swap-horizontal-outline' },
     { label: 'Days Active', value: '0', icon: 'calendar-outline' },
-  ];
-
-  const healthMetrics = [
-    { label: 'Food Score', value: 0, color: getScoreColor(0) },
-    { label: 'Water Quality', value: 0, color: getScoreColor(0) },
-    { label: 'Personal Care', value: 0, color: getScoreColor(0) },
-    { label: 'Household', value: 0, color: getScoreColor(0) },
   ];
 
   const menuSections = [
@@ -119,49 +110,6 @@ export default function Profile({ navigation }) {
               </View>
             ))}
           </View>
-        </Card>
-
-        <Card style={styles.scoreCard} variant="elevated">
-          <View style={styles.scoreHeader}>
-            <View>
-              <Text style={styles.scoreTitle}>Overall Health Score</Text>
-              <Text style={styles.scoreSubtitle}>Last updated today</Text>
-            </View>
-            <ScoreRing score={healthScore} size={90} strokeWidth={8} showLabel={false} />
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.metricsGrid}>
-            {healthMetrics.map((metric, idx) => (
-              <View key={idx} style={styles.metricItem}>
-                <View style={styles.metricHeader}>
-                  <Text style={styles.metricLabel}>{metric.label}</Text>
-                  <Text style={[styles.metricValue, { color: metric.color }]}>
-                    {metric.value}
-                  </Text>
-                </View>
-                <View style={styles.metricBar}>
-                  <View
-                    style={[
-                      styles.metricBarFill,
-                      { width: `${metric.value}%`, backgroundColor: metric.color },
-                    ]}
-                  />
-                </View>
-              </View>
-            ))}
-          </View>
-
-          <Button
-            title="View Detailed Report"
-            variant="secondary"
-            size="medium"
-            icon="arrow-forward"
-            iconPosition="right"
-            onPress={() => navigation.navigate('HealthReports')}
-            style={{ marginTop: SPACING.base }}
-          />
         </Card>
 
         {menuSections.map((section, sectionIdx) => (
@@ -271,17 +219,6 @@ const styles = StyleSheet.create({
   },
   statValue: { fontSize: TYPOGRAPHY.xl, fontWeight: '700', color: COLORS.textPrimary },
   statLabel: { fontSize: TYPOGRAPHY.xs, color: COLORS.textSecondary, textAlign: 'center' },
-  scoreCard: { marginBottom: SPACING.base, padding: SPACING.lg },
-  scoreHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  scoreTitle: { fontSize: TYPOGRAPHY.lg, fontWeight: '700', color: COLORS.textPrimary },
-  scoreSubtitle: { fontSize: TYPOGRAPHY.sm, color: COLORS.textSecondary, marginTop: 4 },
-  metricsGrid: { gap: SPACING.md },
-  metricItem: { gap: SPACING.xs },
-  metricHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  metricLabel: { fontSize: TYPOGRAPHY.sm, fontWeight: '600', color: COLORS.textPrimary },
-  metricValue: { fontSize: TYPOGRAPHY.base, fontWeight: '700' },
-  metricBar: { height: 6, backgroundColor: COLORS.border, borderRadius: 3, overflow: 'hidden' },
-  metricBarFill: { height: '100%', borderRadius: 3 },
   menuSection: { marginBottom: SPACING.base },
   sectionTitle: {
     fontSize: TYPOGRAPHY.sm,

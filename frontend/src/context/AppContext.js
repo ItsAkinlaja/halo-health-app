@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect, useMemo } from 'react';
+import { profileService } from '../services/profileService';
+import storage, { STORAGE_KEYS } from '../utils/storage';
 
 // Initial state
 const initialState = {
@@ -92,6 +94,50 @@ const AppContext = createContext();
 // Provider
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const hydrateProfiles = async () => {
+      if (!state.user?.id) {
+        dispatch({ type: ActionTypes.SET_PROFILES, payload: [] });
+        dispatch({ type: ActionTypes.SET_ACTIVE_PROFILE, payload: null });
+        return;
+      }
+
+      try {
+        const response = await profileService.getProfiles(state.user.id);
+        if (!isActive) return;
+
+        const nextProfiles = Array.isArray(response)
+          ? response
+          : response?.data || [];
+
+        dispatch({ type: ActionTypes.SET_PROFILES, payload: nextProfiles });
+
+        const storedActiveProfileId = await storage.getItem(STORAGE_KEYS.ACTIVE_PROFILE_ID);
+        const storedProfile = nextProfiles.find((profile) => profile.id === storedActiveProfileId) || null;
+        const primaryProfile = nextProfiles.find((profile) => profile.is_primary) || nextProfiles[0] || null;
+        const nextActiveProfile = storedProfile || primaryProfile || null;
+
+        dispatch({ type: ActionTypes.SET_ACTIVE_PROFILE, payload: nextActiveProfile });
+
+        if (nextActiveProfile?.id) {
+          await storage.setItem(STORAGE_KEYS.ACTIVE_PROFILE_ID, nextActiveProfile.id);
+        } else {
+          await storage.removeItem(STORAGE_KEYS.ACTIVE_PROFILE_ID);
+        }
+      } catch (error) {
+        console.warn('Failed to hydrate profiles:', error.message);
+      }
+    };
+
+    hydrateProfiles();
+
+    return () => {
+      isActive = false;
+    };
+  }, [state.user?.id]);
 
   // Memoize actions so consumers don't re-render when the provider re-renders for unrelated reasons
   const actions = useMemo(() => ({

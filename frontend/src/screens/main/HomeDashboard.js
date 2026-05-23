@@ -252,59 +252,36 @@ export default function HomeDashboard({ navigation }) {
           </TouchableOpacity>
         ) : null}
 
-        {/* Profile Selector */}
-        {profiles.length > 0 ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.profileRow}
-            contentContainerStyle={styles.profileRowContent}
-          >
-            {profiles.map((p) => (
-              <TouchableOpacity
-                key={p.id}
-                style={[
-                  styles.profileChip,
-                  activeProfile?.id === p.id ? styles.profileChipActive : null,
-                ]}
-                onPress={async () => {
-                  setActiveProfile(p);
-                  await storage.setItem(STORAGE_KEYS.ACTIVE_PROFILE_ID, p.id);
-                }}
-              >
-                <View style={[
-                  styles.profileDot,
-                  activeProfile?.id === p.id ? styles.profileDotActive : null,
-                ]} />
-                <Text
-                  style={[
-                    styles.profileName,
-                    activeProfile?.id === p.id ? styles.profileNameActive : null,
-                  ]}
-                >
-                  {p.name}
+        {activeProfile ? (
+          <Card style={styles.scanContextCard} variant="ghost">
+            <View style={styles.scanContextHeader}>
+              <View style={styles.scanContextIconWrap}>
+                <Ionicons name={activeProfile.member_type === 'pet' ? 'paw' : 'person'} size={16} color={COLORS.primary} />
+              </View>
+              <View style={styles.scanContextTextWrap}>
+                <Text style={styles.scanContextLabel}>Ready to scan for</Text>
+                <Text style={styles.scanContextTitle} numberOfLines={1}>
+                  {activeProfile.member_type === 'pet'
+                    ? `${activeProfile.pet_type || 'Pet'} · ${activeProfile.name}`
+                    : activeProfile.name}
                 </Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={styles.profileAddChip}
-              onPress={() => navigation.navigate('FamilyProfiles')}
-            >
-              <Ionicons name="add-circle-outline" size={16} color={COLORS.primary} />
-              <Text style={styles.profileAddText}>Add Profile</Text>
-            </TouchableOpacity>
-          </ScrollView>
+              </View>
+            </View>
+            <Text style={styles.scanContextSub}>
+              Products and recommendations will use this member's profile until you switch.
+            </Text>
+          </Card>
         ) : null}
 
         {/* Health Score Hero */}
         <Card style={styles.heroCard} variant="elevated">
           <View style={styles.heroTop}>
             <View style={styles.heroLeft}>
-              <Text style={styles.heroLabel}>Health Score</Text>
+              <Text style={styles.heroLabel}>Overall Health Score</Text>
               <Text style={styles.heroSub}>
                 {recentScans.length > 0 
-                  ? `Based on ${recentScans.length} recent scans`
-                  : 'Start scanning to see your score'
+                  ? `Active profile overview from ${recentScans.length} recent scans`
+                  : 'Start scanning to see your overall dashboard'
                 }
               </Text>
               {scanStats?.trend ? (
@@ -618,6 +595,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primaryLight,
     borderColor: COLORS.primary,
   },
+  profileChipTextWrap: {
+    alignItems: 'flex-start',
+  },
   profileDot: {
     width: 8,
     height: 8,
@@ -635,6 +615,15 @@ const styles = StyleSheet.create({
   profileNameActive: {
     color: COLORS.primary,
   },
+  profileType: {
+    fontSize: TYPOGRAPHY.xs,
+    color: COLORS.textTertiary,
+    marginTop: 1,
+  },
+  profileTypeActive: {
+    color: COLORS.primary,
+    opacity: 0.8,
+  },
   profileAddChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -651,6 +640,37 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.sm,
     color: COLORS.primary,
     fontWeight: '600',
+  },
+
+  scanContextCard: { marginBottom: SPACING.base, padding: SPACING.base },
+  scanContextHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  scanContextIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scanContextTextWrap: { flex: 1 },
+  scanContextLabel: {
+    fontSize: TYPOGRAPHY.xs,
+    color: COLORS.textTertiary,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+  },
+  scanContextTitle: {
+    fontSize: TYPOGRAPHY.base,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginTop: 1,
+  },
+  scanContextSub: {
+    fontSize: TYPOGRAPHY.sm,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
+    marginTop: SPACING.sm,
   },
 
   heroCard: { marginBottom: SPACING.base, padding: SPACING.lg },

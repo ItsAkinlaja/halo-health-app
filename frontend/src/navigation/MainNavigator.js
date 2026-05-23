@@ -3,6 +3,7 @@ import { View, StyleSheet, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeDashboard from '../screens/main/HomeDashboard';
 import Scanner from '../screens/main/Scanner';
 import SocialFeed from '../screens/main/SocialFeed';
@@ -58,6 +59,8 @@ function ScanTabIcon({ focused }) {
 }
 
 function HomeTabs() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -65,7 +68,13 @@ function HomeTabs() {
         tabBarShowLabel: true,
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textTertiary,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            height: styles.tabBar.height + insets.bottom,
+            paddingBottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 20 : 10),
+          },
+        ],
         tabBarLabelStyle: styles.tabLabel,
         tabBarItemStyle: styles.tabItem,
       }}
@@ -192,22 +201,22 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    height: Platform.OS === 'ios' ? 88 : 68,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
-    paddingTop: 12,
+    height: Platform.OS === 'ios' ? 88 : 76,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 8,
+    paddingTop: 10,
     ...SHADOWS.lg,
   },
   tabLabel: {
     fontSize: TYPOGRAPHY.xs,
     fontWeight: '600',
-    marginTop: 4,
+    marginTop: 2,
   },
   tabItem: {
-    paddingTop: 4,
+    paddingTop: 2,
   },
   scanTabItem: {
     paddingTop: 0,
-    marginTop: -12,
+    marginTop: -10,
   },
   scanTabBtn: {
     width: 56,

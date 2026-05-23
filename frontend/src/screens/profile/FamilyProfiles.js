@@ -7,10 +7,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../../context/AppContext';
 import { profileService } from '../../services/profileService';
+import storage, { STORAGE_KEYS } from '../../utils/storage';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../styles/theme';
 
 export default function FamilyProfiles({ navigation }) {
-  const { user, profiles, setProfiles, setActiveProfile } = useAppContext();
+  const { user, profiles, activeProfile, setProfiles, setActiveProfile } = useAppContext();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -20,6 +21,8 @@ export default function FamilyProfiles({ navigation }) {
     age: '',
     relationship: '',
     gender: '',
+    memberType: 'person',
+    petType: '',
   });
 
   useEffect(() => {
@@ -39,7 +42,20 @@ export default function FamilyProfiles({ navigation }) {
     try {
       setLoading(true);
       const data = await profileService.getProfiles(user.id);
-      setProfiles(data || []);
+      const nextProfiles = data || [];
+      setProfiles(nextProfiles);
+
+      const storedActiveProfileId = await storage.getItem(STORAGE_KEYS.ACTIVE_PROFILE_ID);
+      const currentActiveProfile = nextProfiles.find((profile) => profile.id === activeProfile?.id)
+        || nextProfiles.find((profile) => profile.id === storedActiveProfileId)
+        || nextProfiles.find((profile) => profile.is_primary)
+        || nextProfiles[0]
+        || null;
+
+      if (currentActiveProfile?.id) {
+        setActiveProfile(currentActiveProfile);
+        await storage.setItem(STORAGE_KEYS.ACTIVE_PROFILE_ID, currentActiveProfile.id);
+      }
     } catch (error) {
       console.warn('Failed to load profiles:', error.message);
       Alert.alert('Error', 'Failed to load family profiles');
@@ -50,7 +66,7 @@ export default function FamilyProfiles({ navigation }) {
 
   const handleAddProfile = () => {
     setEditingProfile(null);
-    setFormData({ name: '', age: '', relationship: '', gender: '' });
+    setFormData({ name: '', age: '', relationship: '', gender: '', memberType: 'person', petType: '' });
     setShowAddModal(true);
   };
 
@@ -61,6 +77,8 @@ export default function FamilyProfiles({ navigation }) {
       age: profile.age?.toString() || '',
       relationship: profile.relationship || '',
       gender: profile.gender || '',
+      memberType: profile.member_type || (profile.relationship === 'pet' ? 'pet' : 'person'),
+      petType: profile.pet_type || '',
     });
     setShowAddModal(true);
   };
@@ -83,17 +101,25 @@ export default function FamilyProfiles({ navigation }) {
         user_id: user.id,
         name: formData.name,
         age: formData.age ? parseInt(formData.age) : null,
-        relationship: formData.relationship,
+        relationship: formData.memberType === 'pet' ? 'pet' : formData.relationship,
+        member_type: formData.memberType,
+        pet_type: formData.memberType === 'pet' ? formData.petType : null,
         gender: formData.gender,
       };
 
       if (editingProfile) {
         await profileService.updateProfile(editingProfile.id, profileData);
       } else {
-        await profileService.createProfile(profileData);
+        const createdProfile = await profileService.createProfile(profileData);
+        const profileRecord = createdProfile?.data || createdProfile;
+        if (profileRecord?.id) {
+          setActiveProfile(profileRecord);
+          await storage.setItem(STORAGE_KEYS.ACTIVE_PROFILE_ID, profileRecord.id);
+        }
       }
 
       await loadProfiles();
+
       setShowAddModal(false);
       Alert.alert('Success', `Profile ${editingProfile ? 'updated' : 'created'} successfully`);
     } catch (error) {
@@ -115,8 +141,23 @@ export default function FamilyProfiles({ navigation }) {
           style: 'destructive',
           onPress: async () => {
             try {
+              const deletingActive = activeProfile?.id === profile.id;
               await profileService.deleteProfile(profile.id);
-              await loadProfiles();
+              if (deletingActive) {
+                const refreshedProfiles = await profileService.getProfiles(user.id);
+                const remainingProfiles = (refreshedProfiles || []).filter((item) => item.id !== profile.id);
+                setProfiles(remainingProfiles);
+                const nextProfile = remainingProfiles.find((item) => item.is_primary) || remainingProfiles[0] || null;
+                setActiveProfile(nextProfile);
+                if (nextProfile?.id) {
+                  await storage.setItem(STORAGE_KEYS.ACTIVE_PROFILE_ID, nextProfile.id);
+                } else {
+                  await storage.removeItem(STORAGE_KEYS.ACTIVE_PROFILE_ID);
+                }
+              } else {
+                await loadProfiles();
+              }
+
               Alert.alert('Success', 'Profile deleted successfully');
             } catch (error) {
               console.warn('Failed to delete profile:', error.message);
@@ -186,14 +227,16 @@ export default function FamilyProfiles({ navigation }) {
             {profiles.map((profile) => (
               <View key={profile.id} style={styles.profileCard}>
                 <View style={styles.profileAvatar}>
-                  <Ionicons name="person" size={28} color={COLORS.primary} />
+                  <Ionicons name={profile.member_type === 'pet' || profile.relationship === 'pet' ? 'paw' : 'person'} size={28} color={COLORS.primary} />
                 </View>
                 <View style={styles.profileInfo}>
                   <Text style={styles.profileName}>{profile.name}</Text>
                   <Text style={styles.profileDetails}>
                     {profile.age && `${profile.age} years`}
                     {profile.age && profile.relationship && ' · '}
-                    {profile.relationship}
+                    {profile.member_type === 'pet' || profile.relationship === 'pet'
+                      ? (profile.pet_type || 'Pet')
+                      : profile.relationship}
                   </Text>
                   {profile.gender && (
                     <Text style={styles.profileGender}>{profile.gender}</Text>
@@ -245,6 +288,41 @@ export default function FamilyProfiles({ navigation }) {
             contentContainerStyle={styles.modalContentContainer}
           >
             <View style={styles.formGroup}>
+              <Text style={styles.label}>Member Type</Text>
+              <View style={styles.typeRow}>
+                {[
+                  { key: 'person', label: 'Person', icon: 'person' },
+                  { key: 'pet', label: 'Pet', icon: 'paw' },
+                ].map((type) => (
+                  <TouchableOpacity
+                    key={type.key}
+                    style={[
+                      styles.typeOption,
+                      formData.memberType === type.key && styles.typeOptionActive,
+                    ]}
+                    onPress={() => setFormData(prev => ({
+                      ...prev,
+                      memberType: type.key,
+                      relationship: type.key === 'pet' ? 'pet' : prev.relationship,
+                    }))}
+                  >
+                    <Ionicons
+                      name={type.icon}
+                      size={16}
+                      color={formData.memberType === type.key ? COLORS.white : COLORS.textSecondary}
+                    />
+                    <Text style={[
+                      styles.typeText,
+                      formData.memberType === type.key && styles.typeTextActive,
+                    ]}>
+                      {type.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.formGroup}>
               <Text style={styles.label}>Name</Text>
               <TextInput
                 style={styles.input}
@@ -268,16 +346,29 @@ export default function FamilyProfiles({ navigation }) {
                 />
               </View>
 
-              <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Relationship</Text>
-                <TextInput
-                  style={styles.input}
-                  value={formData.relationship}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, relationship: text }))}
-                  placeholder="e.g., Child"
-                  placeholderTextColor={COLORS.textTertiary}
-                />
-              </View>
+              {formData.memberType === 'pet' ? (
+                <View style={[styles.formGroup, { flex: 1 }]}>
+                  <Text style={styles.label}>Pet Type</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.petType}
+                    onChangeText={(text) => setFormData(prev => ({ ...prev, petType: text }))}
+                    placeholder="e.g., Dog, Cat"
+                    placeholderTextColor={COLORS.textTertiary}
+                  />
+                </View>
+              ) : (
+                <View style={[styles.formGroup, { flex: 1 }]}>
+                  <Text style={styles.label}>Relationship</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.relationship}
+                    onChangeText={(text) => setFormData(prev => ({ ...prev, relationship: text }))}
+                    placeholder="e.g., Child"
+                    placeholderTextColor={COLORS.textTertiary}
+                  />
+                </View>
+              )}
             </View>
 
             <View style={styles.formGroup}>
@@ -352,6 +443,34 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  typeRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  typeOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+  },
+  typeOptionActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  typeText: {
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  typeTextActive: {
+    color: COLORS.white,
   },
   headerTitle: {
     fontSize: TYPOGRAPHY.base,

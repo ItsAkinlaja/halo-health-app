@@ -29,7 +29,9 @@ export function ProfileSelector({ profiles, activeProfile, onProfileChange }) {
               styles.profileRelation,
               activeProfile?.id === profile.id && styles.activeProfileText,
             ]}>
-              {profile.relationship}
+              {profile.member_type === 'pet' || profile.relationship === 'pet'
+                ? (profile.pet_type || 'Pet')
+                : profile.relationship}
             </Text>
           </TouchableOpacity>
         ))}

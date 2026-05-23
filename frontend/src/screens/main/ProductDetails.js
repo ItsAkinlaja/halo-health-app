@@ -156,6 +156,9 @@ export default function ProductDetails({ route, navigation }) {
   ];
 
   const scoreColor = getScoreColor(product.score);
+  const memberLabel = activeProfile?.member_type === 'pet'
+    ? `${activeProfile.pet_type || 'Pet'} · ${activeProfile.name || 'Selected pet'}`
+    : activeProfile?.name || 'Selected profile';
 
   return (
     <View style={styles.container}>
@@ -193,6 +196,10 @@ export default function ProductDetails({ route, navigation }) {
                 <ScoreBadge score={product.health_score || 0} size="lg" />
                 <Text style={styles.productName}>{product.name || 'Unknown Product'}</Text>
                 <Text style={styles.productBrand}>{product.brand || 'Unknown Brand'}</Text>
+                <View style={styles.memberContextRow}>
+                  <Ionicons name={activeProfile?.member_type === 'pet' ? 'paw' : 'person'} size={14} color={COLORS.textSecondary} />
+                  <Text style={styles.memberContextText}>Analyzed for {memberLabel}</Text>
+                </View>
                 <View style={styles.heroMeta}>
                   <StatusBadge label={product.category || 'Product'} color={COLORS.accent} />
                   {product.processing_level && (
@@ -446,6 +453,8 @@ const styles = StyleSheet.create({
   heroLeft: { flex: 1, paddingRight: SPACING.base, gap: SPACING.sm },
   productName: { fontSize: TYPOGRAPHY.xxl, fontWeight: '800', color: COLORS.textPrimary, letterSpacing: -0.5, lineHeight: 32 },
   productBrand: { fontSize: TYPOGRAPHY.base, color: COLORS.textSecondary, fontWeight: '500' },
+  memberContextRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  memberContextText: { fontSize: TYPOGRAPHY.xs, color: COLORS.textSecondary, fontWeight: '600' },
   heroMeta: { flexDirection: 'row', gap: SPACING.sm, flexWrap: 'wrap' },
   allergenStrip: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, backgroundColor: COLORS.error + '12', borderRadius: RADIUS.sm, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs },
   allergenText: { fontSize: TYPOGRAPHY.sm, color: COLORS.error, fontWeight: '600' },

@@ -1,5 +1,6 @@
 const { supabase } = require('../utils/database');
 const { NotFoundError, ValidationError, ForbiddenError } = require('../middleware/errorHandler');
+const logger = console;
 
 // Helper — verify profile belongs to requesting user
 async function assertProfileOwner(profileId, userId) {
@@ -70,7 +71,17 @@ class ProfileController {
       } else {
         const { data, error } = await supabase
           .from('health_profiles')
-          .insert([{ user_id: userId, name: name || 'My Profile', relationship: 'self', gender, weight_kg: weight, height_cm: height, is_primary: true }])
+          .insert([{
+            user_id: userId,
+            name: name || 'My Profile',
+            relationship: 'self',
+            member_type: 'person',
+            pet_type: null,
+            gender,
+            weight_kg: weight,
+            height_cm: height,
+            is_primary: true,
+          }])
           .select()
           .single();
         if (error) throw new ValidationError(error.message);
@@ -111,16 +122,19 @@ class ProfileController {
     try {
       const userId = req.user.id;
       const {
-        name, relationship = 'self', age, gender, is_primary = false,
+        name, relationship = 'self', member_type = 'person', pet_type, age, gender, is_primary = false,
         health_goals, dietary_restrictions, allergies, health_conditions,
         notification_settings,
       } = req.body;
 
-      logger.info(`[ProfileController] Creating profile for user ${userId}:`, { name, relationship, is_primary });
+      const normalizedMemberType = member_type === 'pet' ? 'pet' : 'person';
+      const normalizedRelationship = normalizedMemberType === 'pet' ? 'pet' : (relationship || 'self');
+
+      logger.info(`[ProfileController] Creating profile for user ${userId}:`, { name, relationship: normalizedRelationship, member_type: normalizedMemberType, is_primary });
 
       if (!name?.trim()) throw new ValidationError('Name is required');
 
-      // Check profile limit (max 10 profiles per user)
+      // Check profile limit (max 15 household members per user)
       const { count, error: countError } = await supabase
         .from('health_profiles')
         .select('id', { count: 'exact', head: true })
@@ -128,10 +142,10 @@ class ProfileController {
 
       if (countError) {
         logger.error('[ProfileController] Error counting profiles:', countError);
-        throw new AppError('Failed to check profile limit', 500);
+        throw new ValidationError('Failed to check profile limit');
       }
 
-      if (count >= 10) throw new ValidationError('Maximum 10 profiles allowed per user');
+      if (count >= 15) throw new ValidationError('Maximum 15 household members allowed per user');
 
       // If creating primary, unset any existing primary
       if (is_primary) {
@@ -152,7 +166,9 @@ class ProfileController {
         .insert([{
           user_id: userId,
           name: name.trim(),
-          relationship,
+          relationship: normalizedRelationship,
+          member_type: normalizedMemberType,
+          pet_type: normalizedMemberType === 'pet' ? (pet_type?.trim() || null) : null,
           age_group: age ? (age < 13 ? 'child' : age < 18 ? 'teen' : age < 65 ? 'adult' : 'senior') : null,
           gender,
           health_goals: health_goals || [],
@@ -208,13 +224,16 @@ class ProfileController {
       const { profileId } = req.params;
       await assertProfileOwner(profileId, req.user.id);
 
-      const { name, relationship, age, gender, health_goals } = req.body;
+      const { name, relationship, member_type, pet_type, age, gender, health_goals } = req.body;
+      const normalizedMemberType = member_type === 'pet' ? 'pet' : undefined;
 
       const { data, error } = await supabase
         .from('health_profiles')
         .update({
           ...(name && { name: name.trim() }),
           ...(relationship && { relationship }),
+          ...(normalizedMemberType && { member_type: normalizedMemberType }),
+          ...(normalizedMemberType === 'pet' ? { pet_type: pet_type?.trim() || null, relationship: 'pet' } : pet_type !== undefined ? { pet_type: null } : {}),
           ...(gender && { gender }),
           ...(health_goals && { health_goals }),
           ...(age && { age_group: age < 13 ? 'child' : age < 18 ? 'teen' : age < 65 ? 'adult' : 'senior' }),
