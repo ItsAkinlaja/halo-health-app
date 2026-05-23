@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, Dimensions, FlatList,
   TouchableOpacity, SafeAreaView, Platform, ScrollView
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
@@ -54,6 +55,7 @@ const ONBOARDING_STEPS = [
 
 export default function OnboardingFlow({ navigation }) {
   const { saveData, persistData } = useOnboarding();
+  const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef(null);
 
@@ -194,7 +196,7 @@ export default function OnboardingFlow({ navigation }) {
       <StatusBar style="dark" />
       
       {/* Top Progress & Back */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: Math.max(insets.top, SPACING.sm) }] }>
         {currentIndex > 0 ? (
           <TouchableOpacity onPress={handleBack} hitSlop={{top:20,bottom:20,left:20,right:20}}>
             <Ionicons name="chevron-back" size={28} color={COLORS.textPrimary} />
@@ -250,7 +252,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.md,
     paddingBottom: SPACING.lg,
   },
   progressTrack: {
@@ -272,7 +273,7 @@ const styles = StyleSheet.create({
   },
   pageHeader: {
     paddingHorizontal: SPACING.xl,
-    paddingBottom: SPACING.xl,
+    paddingBottom: SPACING.lg,
   },
   pageTitle: {
     fontSize: TYPOGRAPHY.xxxl,
@@ -290,19 +291,19 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: SPACING.xxl,
+    paddingHorizontal: SPACING.xl,
   },
   iconRing: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 108,
+    height: 108,
+    borderRadius: 54,
     backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.xxl,
+    marginBottom: SPACING.xl,
   },
   welcomeTitle: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '800',
     color: COLORS.textPrimary,
     textAlign: 'center',
@@ -319,14 +320,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    paddingBottom: 100,
+    paddingBottom: 84,
   },
   optionCard: {
     width: (SCREEN_WIDTH - SPACING.xl * 2 - SPACING.md) / 2,
-    aspectRatio: 1,
+    aspectRatio: 0.92,
     backgroundColor: COLORS.background,
     borderRadius: RADIUS.xl,
-    padding: SPACING.lg,
+    padding: SPACING.base,
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     marginBottom: SPACING.md,
@@ -359,8 +360,8 @@ const styles = StyleSheet.create({
   },
   bottomBar: {
     paddingHorizontal: SPACING.xl,
-    paddingBottom: Platform.OS === 'ios' ? SPACING.md : SPACING.xl,
-    paddingTop: SPACING.md,
+    paddingBottom: Platform.OS === 'ios' ? SPACING.md : SPACING.lg,
+    paddingTop: SPACING.sm,
     backgroundColor: COLORS.white,
     borderTopWidth: 1,
     borderTopColor: COLORS.background,

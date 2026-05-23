@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, StatusBar, Animated } from 'react-native';
+import { View, Text, StyleSheet, Image, ImageBackground, TouchableOpacity, StatusBar, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 import storage, { STORAGE_KEYS } from '../../utils/storage';
 
 export default function Welcome({ navigation }) {
+  const backgroundImage = { uri: 'https://ik.imagekit.io/scmchurch/milenagnedyalkova-dessert-7237716.jpg' };
   const { t } = useTranslation();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
@@ -48,86 +49,88 @@ export default function Welcome({ navigation }) {
   return (
     <View style={styles.root}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      <LinearGradient
-        colors={['#00B386', '#00D4AA', '#52C9A8']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.gradient}
-      >
-        <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-          <Animated.View 
-            style={[
-              styles.content,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
-              },
-            ]}
-          >
-            {/* Logo Section */}
-            <View style={styles.logoSection}>
-              <View style={styles.logoContainer}>
-                <Image
-                  source={{ uri: 'https://ik.imagekit.io/scmchurch/WhatsApp%20Image%202026-04-20%20at%2019.54.45.jpeg' }}
-                  style={styles.logo}
-                  resizeMode="contain"
+      <ImageBackground source={backgroundImage} style={styles.gradient} resizeMode="cover">
+        <LinearGradient
+          colors={['rgba(0, 0, 0, 0.25)', 'rgba(0, 0, 0, 0.55)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.overlay}
+        >
+          <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+            <Animated.View 
+              style={[
+                styles.content,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }],
+                },
+              ]}
+            >
+              {/* Logo Section */}
+              <View style={styles.logoSection}>
+                <View style={styles.logoContainer}>
+                  <Image
+                    source={{ uri: 'https://ik.imagekit.io/scmchurch/WhatsApp%20Image%202026-04-20%20at%2019.54.45.jpeg' }}
+                    style={styles.logo}
+                    resizeMode="contain"
+                  />
+                </View>
+                <Text style={styles.title}>{t('welcome.title')}</Text>
+                <Text style={styles.subtitle}>
+                  {t('welcome.subtitle')}
+                </Text>
+              </View>
+
+              {/* Features Grid */}
+              <View style={styles.featuresContainer}>
+                <FeatureCard
+                  icon="scan-outline"
+                  title="Smart Scanning"
+                  description="Instant product analysis with AI"
+                />
+                <FeatureCard
+                  icon="fitness-outline"
+                  title="Health Tracking"
+                  description="Monitor your wellness journey"
+                />
+                <FeatureCard
+                  icon="analytics-outline"
+                  title="Insights & Reports"
+                  description="Data-driven recommendations"
+                />
+                <FeatureCard
+                  icon="people-outline"
+                  title="Family Profiles"
+                  description="Manage health for loved ones"
                 />
               </View>
-              <Text style={styles.title}>{t('welcome.title')}</Text>
-              <Text style={styles.subtitle}>
-                {t('welcome.subtitle')}
-              </Text>
-            </View>
+            </Animated.View>
 
-            {/* Features Grid */}
-            <View style={styles.featuresContainer}>
-              <FeatureCard
-                icon="scan-outline"
-                title="Smart Scanning"
-                description="Instant product analysis with AI"
-              />
-              <FeatureCard
-                icon="fitness-outline"
-                title="Health Tracking"
-                description="Monitor your wellness journey"
-              />
-              <FeatureCard
-                icon="analytics-outline"
-                title="Insights & Reports"
-                description="Data-driven recommendations"
-              />
-              <FeatureCard
-                icon="people-outline"
-                title="Family Profiles"
-                description="Manage health for loved ones"
-              />
-            </View>
-          </Animated.View>
-
-          {/* Footer Actions */}
-          <Animated.View 
-            style={[
-              styles.footer,
-              { opacity: fadeAnim },
-            ]}
-          >
-            <TouchableOpacity
-              style={styles.continueButton}
-              onPress={handleContinue}
-              activeOpacity={0.9}
+            {/* Footer Actions */}
+            <Animated.View 
+              style={[
+                styles.footer,
+                { opacity: fadeAnim },
+              ]}
             >
-              <Text style={styles.continueButtonText}>{t('welcome.continue')}</Text>
-            </TouchableOpacity>
-            
-            <View style={styles.signInRow}>
-              <Text style={styles.signInText}>{t('welcome.alreadyHaveAccount')} </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                <Text style={styles.signInLink}>{t('welcome.signIn')}</Text>
+              <TouchableOpacity
+                style={styles.continueButton}
+                onPress={handleContinue}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.continueButtonText}>{t('welcome.continue')}</Text>
               </TouchableOpacity>
-            </View>
-          </Animated.View>
-        </SafeAreaView>
-      </LinearGradient>
+              
+              <View style={styles.signInRow}>
+                <Text style={styles.signInText}>{t('welcome.alreadyHaveAccount')} </Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                  <Text style={styles.signInLink}>{t('welcome.signIn')}</Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          </SafeAreaView>
+        </LinearGradient>
+      </ImageBackground>
     </View>
   );
 }
@@ -149,6 +152,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   gradient: {
+    flex: 1,
+  },
+  overlay: {
     flex: 1,
   },
   container: {
