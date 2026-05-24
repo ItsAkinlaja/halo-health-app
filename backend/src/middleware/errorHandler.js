@@ -87,16 +87,17 @@ const errorHandler = (err, req, res, next) => {
     error = new UnauthorizedError(message);
   }
 
-  // Supabase errors
-  if (err.code && err.code.startsWith('PGRST')) {
-    const message = 'Database operation failed';
-    error = new AppError(message, 500);
+  // Supabase errors - these are operational, return a clean message
+  if (err.code && (err.code.startsWith('PGRST') || err.code.startsWith('22') || err.code.startsWith('23'))) {
+    const message = err.message || 'Database operation failed';
+    error = new AppError(message, 500, true);
   }
 
   // Default to 500 server error
   if (!error.isOperational) {
-    const message = 'Something went wrong';
-    error = new AppError(message, 500);
+    console.error('[ErrorHandler] Unhandled error:', err?.message || err);
+    const message = process.env.NODE_ENV === 'development' ? (err.message || 'Something went wrong') : 'Something went wrong';
+    error = new AppError(message, 500, true);
   }
 
   res.status(error.statusCode || 500).json({

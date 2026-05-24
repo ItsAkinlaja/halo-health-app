@@ -5,6 +5,8 @@ class SocialService {
   
   async createPost(postData) {
     const response = await api.post('/api/social/posts', postData);
+    // Invalidate feed cache so the new post appears immediately on refresh
+    api.invalidateCache('/api/social/posts');
     return response.data;
   }
 

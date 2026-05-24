@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  RefreshControl, StatusBar, Animated, Dimensions, ActivityIndicator,
+  RefreshControl, StatusBar, Animated, Dimensions, ActivityIndicator, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -214,6 +214,7 @@ export default function HomeDashboard({ navigation }) {
       : user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'there');
   const firstName = displayName.split(' ')[0];
   const capitalizedName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+  const avatarUrl = user?.user_metadata?.avatar_url || null;
 
   if (loading && !refreshing) {
     return (
@@ -250,9 +251,18 @@ export default function HomeDashboard({ navigation }) {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{capitalizedName.charAt(0).toUpperCase()}</Text>
-            </View>
+            <TouchableOpacity onPress={() => navigation.navigate('EditProfilePhoto')}>
+              <View style={styles.avatar}>
+                {avatarUrl ? (
+                  <Image
+                    source={{ uri: avatarUrl }}
+                    style={styles.avatarImage}
+                  />
+                ) : (
+                  <Text style={styles.avatarText}>{capitalizedName.charAt(0).toUpperCase()}</Text>
+                )}
+              </View>
+            </TouchableOpacity>
             <View style={styles.headerText}>
               <Text style={styles.greeting}>{getGreeting()}</Text>
               <Text style={styles.userName}>{capitalizedName}</Text>
@@ -578,6 +588,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
   avatarText: {
     fontSize: TYPOGRAPHY.lg,

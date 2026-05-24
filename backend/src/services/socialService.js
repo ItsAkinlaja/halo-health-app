@@ -82,7 +82,8 @@ class SocialService {
         .order('created_at', { ascending: true }),
     ]);
 
-    if (usersError) throw usersError;
+    // Log but don't throw — return posts with whatever data we have
+    if (usersError) console.warn('[SocialService] Failed to fetch users in hydratePosts:', usersError.message);
     if (profilesError) console.warn('[SocialService] Failed to hydrate profile names:', profilesError.message);
 
     const usersById = new Map((users || []).map(user => [user.id, user]));
@@ -104,7 +105,7 @@ class SocialService {
         .select('following_id')
         .eq('follower_id', viewerId);
 
-      if (followsError) throw followsError;
+      if (followsError) console.warn('[SocialService] Failed to fetch follows in hydratePosts:', followsError.message);
       resolvedFollowingIds = follows?.map(f => f.following_id) || [];
     }
 
@@ -211,7 +212,6 @@ class SocialService {
       
       if (filter === 'following') {
         if (followingIds.length === 0) return [];
-        
         query = query.in('user_id', followingIds);
       }
       
@@ -219,7 +219,7 @@ class SocialService {
       
       if (error) {
         console.error('[SocialService] Supabase error in getFeed:', error);
-        // Fallback to simpler query if join fails
+        // Fallback to simpler query without join
         let simpleQuery = supabase
           .from('social_posts')
           .select('*')
@@ -233,9 +233,23 @@ class SocialService {
         }
 
         const { data: simpleData, error: simpleError } = await simpleQuery;
-          
         if (simpleError) throw simpleError;
-        return this.hydratePosts(simpleData || [], userId, followingIds);
+
+        try {
+          return await this.hydratePosts(simpleData || [], userId, followingIds);
+        } catch (hydrateError) {
+          console.error('[SocialService] hydratePosts fallback failed:', hydrateError);
+          // Last resort: return posts without author info
+          return (simpleData || []).map(post => ({
+            ...post,
+            image_urls: normalizeImageUrls(post.image_urls),
+            user: null,
+            author: null,
+            is_liked: false,
+            is_following: false,
+            likes_count: post.likes_count || 0,
+          }));
+        }
       }
       
       return this.hydratePosts(data || [], userId, followingIds);

@@ -65,6 +65,7 @@ class SocialController {
       const posts = await socialService.getFeed(userId, { filter, limit: parseInt(limit), offset: parseInt(offset) });
       res.json({ success: true, data: { posts } });
     } catch (error) {
+      console.error('[SocialController] getFeed error:', error?.message || error);
       next(error);
     }
   }

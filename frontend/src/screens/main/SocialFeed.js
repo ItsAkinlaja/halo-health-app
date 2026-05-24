@@ -238,8 +238,8 @@ export default function SocialFeed({ navigation }) {
       setHasMore(newPosts.length === PAGE_SIZE);
       setOffset(currentOffset + PAGE_SIZE);
     } catch (error) {
-      console.error('Failed to load posts:', error);
-      if (isInitial && isMounted.current) Alert.alert('Error', 'Failed to load community posts');
+      console.error('Failed to load posts:', error?.message || error);
+      if (isInitial && isMounted.current) Alert.alert('Error', 'Failed to load community posts. Pull down to retry.');
     } finally {
       if (isMounted.current) {
         setLoading(false);
@@ -256,10 +256,13 @@ export default function SocialFeed({ navigation }) {
   // Reload feed when screen comes back into focus (e.g. after creating a post)
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      loadPosts(true);
+      // Only reload if we already have data (i.e. not the initial load)
+      if (!loading) {
+        loadPosts(true);
+      }
     });
     return unsubscribe;
-  }, [navigation, activeTab]);
+  }, [navigation, loading]);
 
   const handleLike = useCallback(async (postId) => {
     const post = posts.find(p => p.id === postId);
