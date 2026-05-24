@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   StatusBar, ActivityIndicator, RefreshControl, Alert,
-  FlatList, Image, Share, Dimensions,
+  FlatList, Image, Share, Dimensions, Modal,
+  TouchableWithoutFeedback, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -98,6 +99,118 @@ const Avatar = React.memo(({ initials, color, avatarUrl, size = 40 }) => {
   );
 });
 
+// ─── Apple-style action sheet ────────────────────────────────────────────────
+const PostActionSheet = ({ visible, isOwn, onClose, onAction }) => {
+  const ownActions = [
+    { key: 'edit',   icon: 'create-outline',       label: 'Edit Post',    destructive: false },
+    { key: 'delete', icon: 'trash-outline',         label: 'Delete Post',  destructive: true  },
+    { key: 'share',  icon: 'arrow-redo-outline',    label: 'Share',        destructive: false },
+  ];
+  const otherActions = [
+    { key: 'report', icon: 'flag-outline',          label: 'Report Post',  destructive: true  },
+    { key: 'block',  icon: 'ban-outline',           label: 'Block User',   destructive: true  },
+    { key: 'share',  icon: 'arrow-redo-outline',    label: 'Share',        destructive: false },
+  ];
+  const actions = isOwn ? ownActions : otherActions;
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={sheet.backdrop} />
+      </TouchableWithoutFeedback>
+
+      <View style={sheet.container}>
+        {/* Action group */}
+        <View style={sheet.group}>
+          {actions.map((action, index) => (
+            <React.Fragment key={action.key}>
+              {index > 0 && <View style={sheet.separator} />}
+              <TouchableOpacity
+                style={sheet.row}
+                onPress={() => { onClose(); onAction(action.key); }}
+                activeOpacity={0.6}
+              >
+                <Text style={[sheet.rowLabel, action.destructive && sheet.rowLabelDestructive]}>
+                  {action.label}
+                </Text>
+                <Ionicons
+                  name={action.icon}
+                  size={20}
+                  color={action.destructive ? COLORS.error : COLORS.textPrimary}
+                />
+              </TouchableOpacity>
+            </React.Fragment>
+          ))}
+        </View>
+
+        {/* Cancel */}
+        <TouchableOpacity style={[sheet.group, sheet.cancelRow]} onPress={onClose} activeOpacity={0.6}>
+          <Text style={sheet.cancelLabel}>Cancel</Text>
+        </TouchableOpacity>
+      </View>
+    </Modal>
+  );
+};
+
+const sheet = StyleSheet.create({
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  container: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: SPACING.base,
+    paddingBottom: Platform.OS === 'ios' ? 34 : SPACING.lg,
+  },
+  group: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.xl,
+    overflow: 'hidden',
+    marginBottom: SPACING.sm,
+    ...SHADOWS.md,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: 17,
+  },
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: COLORS.border,
+    marginHorizontal: SPACING.lg,
+  },
+  rowLabel: {
+    fontSize: TYPOGRAPHY.md,
+    color: COLORS.textPrimary,
+    fontWeight: '400',
+  },
+  rowLabelDestructive: {
+    color: COLORS.error,
+    fontWeight: '400',
+  },
+  cancelRow: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 17,
+  },
+  cancelLabel: {
+    fontSize: TYPOGRAPHY.md,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+  },
+});
+
 // Image with error fallback
 const PostImage = React.memo(({ uri, single }) => {
   const [error, setError] = useState(false);
@@ -127,7 +240,7 @@ const PostImage = React.memo(({ uri, single }) => {
 });
 
 // Memoized PostCard for optimized list rendering
-const PostCard = React.memo(({ post, activeTab, currentUserId, onLike, onSave, onComment, onShare, onFollowChange }) => {
+const PostCard = React.memo(({ post, activeTab, currentUserId, onLike, onSave, onComment, onShare, onMore, onFollowChange }) => {
   const scoreColor = post.score >= 60 ? COLORS.scoreExcellent : COLORS.scoreAvoid;
   const author = getAuthor(post);
   const initials = author.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
@@ -150,7 +263,7 @@ const PostCard = React.memo(({ post, activeTab, currentUserId, onLike, onSave, o
             style={styles.followButton}
           />
         ) : null}
-        <TouchableOpacity style={styles.postMoreBtn}>
+        <TouchableOpacity style={styles.postMoreBtn} onPress={() => onMore(post)}>
           <Ionicons name="ellipsis-horizontal" size={18} color={COLORS.textTertiary} />
         </TouchableOpacity>
       </View>
@@ -238,6 +351,7 @@ export default function SocialFeed({ navigation }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [actionSheet, setActionSheet] = useState({ visible: false, post: null });
   const PAGE_SIZE = 10;
 
   const isMounted = React.useRef(true);
@@ -365,6 +479,72 @@ export default function SocialFeed({ navigation }) {
     }
   }, []);
 
+  const handleMore = useCallback((post) => {
+    setActionSheet({ visible: true, post });
+  }, []);
+
+  const handleMoreAction = useCallback(async (key) => {
+    const post = actionSheet.post;
+    if (!post) return;
+    const isOwn = post.user_id === user?.id || post.author?.id === user?.id || post.user?.id === user?.id;
+
+    if (key === 'share') {
+      handleShare(post);
+    } else if (key === 'edit') {
+      navigation.getParent()?.navigate('CreatePost', { editPost: post });
+    } else if (key === 'delete') {
+      Alert.alert('Delete Post', 'Are you sure you want to delete this post?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete', style: 'destructive',
+          onPress: async () => {
+            try {
+              await socialService.deletePost(post.id);
+              setPosts(prev => prev.filter(p => p.id !== post.id));
+            } catch {
+              Alert.alert('Error', 'Failed to delete post.');
+            }
+          },
+        },
+      ]);
+    } else if (key === 'report') {
+      Alert.alert('Report Post', 'Why are you reporting this post?', [
+        { text: 'Spam', onPress: () => submitReport(post.id, 'spam') },
+        { text: 'Inappropriate content', onPress: () => submitReport(post.id, 'inappropriate') },
+        { text: 'Misinformation', onPress: () => submitReport(post.id, 'misinformation') },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    } else if (key === 'block') {
+      const authorId = post.user_id || post.author?.id || post.user?.id;
+      Alert.alert('Block User', "Block this user? You won't see their posts anymore.", [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Block', style: 'destructive',
+          onPress: async () => {
+            try {
+              await socialService.blockUser(authorId);
+              setPosts(prev => prev.filter(p =>
+                p.user_id !== authorId && p.author?.id !== authorId && p.user?.id !== authorId
+              ));
+              Alert.alert('Blocked', 'User has been blocked.');
+            } catch {
+              Alert.alert('Error', 'Failed to block user.');
+            }
+          },
+        },
+      ]);
+    }
+  }, [actionSheet.post, user, navigation, handleShare]);
+
+  const submitReport = async (postId, reason) => {
+    try {
+      await socialService.reportPost(postId, reason);
+      Alert.alert('Reported', "Thank you. We'll review this post.");
+    } catch {
+      Alert.alert('Error', 'Failed to submit report.');
+    }
+  };
+
   const handleFollowChange = useCallback((userId, following) => {
     setPosts(prev => prev.map(post => (
       post.user_id === userId || post.user?.id === userId || post.author?.id === userId
@@ -470,6 +650,7 @@ export default function SocialFeed({ navigation }) {
               onSave={handleSave}
               onComment={handleComment}
               onShare={handleShare}
+              onMore={handleMore}
               onFollowChange={handleFollowChange}
             />
           )}
@@ -492,6 +673,17 @@ export default function SocialFeed({ navigation }) {
       <TouchableOpacity style={styles.fab} onPress={() => navigation.getParent()?.navigate('CreatePost')}>
         <Ionicons name="add" size={26} color={COLORS.white} />
       </TouchableOpacity>
+
+      <PostActionSheet
+        visible={actionSheet.visible}
+        isOwn={
+          actionSheet.post?.user_id === user?.id ||
+          actionSheet.post?.author?.id === user?.id ||
+          actionSheet.post?.user?.id === user?.id
+        }
+        onClose={() => setActionSheet({ visible: false, post: null })}
+        onAction={handleMoreAction}
+      />
     </SafeAreaView>
   );
 }

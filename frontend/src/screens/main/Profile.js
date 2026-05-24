@@ -30,6 +30,17 @@ export default function Profile({ navigation }) {
   const avatarUrl = user?.user_metadata?.avatar_url;
   const memberSince = user?.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently';
 
+  // Derive membership tier from user metadata — never hardcode
+  const memberTier = user?.user_metadata?.subscription_tier
+    || user?.user_metadata?.plan
+    || user?.app_metadata?.subscription_tier
+    || user?.app_metadata?.plan
+    || 'free';
+  const isPremium = memberTier !== 'free';
+  const memberLabel = isPremium
+    ? `${memberTier.charAt(0).toUpperCase() + memberTier.slice(1)} Member`
+    : 'Free Member';
+
   const stats = [
     { label: 'Products Scanned', value: '0', icon: 'scan-outline' },
     { label: 'Clean Swaps Made', value: '0', icon: 'swap-horizontal-outline' },
@@ -88,8 +99,14 @@ export default function Profile({ navigation }) {
               <Text style={styles.profileName}>{displayName}</Text>
               <Text style={styles.profileEmail}>{displayEmail}</Text>
               <View style={styles.memberBadge}>
-                <Ionicons name="shield-checkmark" size={14} color={COLORS.primary} />
-                <Text style={styles.memberText}>Premium Member</Text>
+                <Ionicons
+                  name={isPremium ? 'shield-checkmark' : 'person-circle-outline'}
+                  size={14}
+                  color={isPremium ? COLORS.primary : COLORS.textTertiary}
+                />
+                <Text style={[styles.memberText, !isPremium && { color: COLORS.textTertiary }]}>
+                  {memberLabel}
+                </Text>
               </View>
             </View>
             <TouchableOpacity
