@@ -442,3 +442,4 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: SPACING.base },
   loadingText: { fontSize: TYPOGRAPHY.base, color: COLORS.textSecondary, fontWeight: '500', marginTop: SPACING.base },
 });
+
