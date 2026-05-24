@@ -91,7 +91,7 @@ class SocialService {
     const [{ data: users, error: usersError }, { data: profiles, error: profilesError }] = await Promise.all([
       supabase
         .from('users')
-        .select('id, username, avatar_url, halo_health_id, bio, full_name, name')
+        .select('id, username, avatar_url, halo_health_id, bio')
         .in('id', authorIds),
       supabase
         .from('health_profiles')
