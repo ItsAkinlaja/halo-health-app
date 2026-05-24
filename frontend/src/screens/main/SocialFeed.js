@@ -224,7 +224,7 @@ export default function SocialFeed({ navigation }) {
           <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('SocialSearch')}>
             <Ionicons name="search-outline" size={22} color={COLORS.textPrimary} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('CreatePost')}>
+          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.getParent()?.navigate('CreatePost')}>
             <Ionicons name="create-outline" size={22} color={COLORS.textPrimary} />
           </TouchableOpacity>
         </View>
@@ -305,7 +305,7 @@ export default function SocialFeed({ navigation }) {
         />
       )}
 
-      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('CreatePost')}>
+      <TouchableOpacity style={styles.fab} onPress={() => navigation.getParent()?.navigate('CreatePost')}>
         <Ionicons name="add" size={26} color={COLORS.white} />
       </TouchableOpacity>
     </SafeAreaView>

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, useMemo } from 'react';
 import { profileService } from '../services/profileService';
 import storage, { STORAGE_KEYS } from '../utils/storage';
+import { scheduleDailyNotifications } from '../utils/notifications';
 
 // Initial state
 const initialState = {
@@ -138,6 +139,13 @@ export function AppProvider({ children }) {
       isActive = false;
     };
   }, [state.user?.id]);
+
+  // Schedule daily notifications whenever activeProfile changes
+  useEffect(() => {
+    if (state.activeProfile) {
+      scheduleDailyNotifications(state.activeProfile);
+    }
+  }, [state.activeProfile]);
 
   // Memoize actions so consumers don't re-render when the provider re-renders for unrelated reasons
   const actions = useMemo(() => ({
