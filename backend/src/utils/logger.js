@@ -1,8 +1,4 @@
 const winston = require('winston');
-const path = require('path');
-
-// Create logs directory if it doesn't exist
-const logDir = path.join(__dirname, '../../logs');
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
@@ -17,32 +13,41 @@ const logger = winston.createLogger({
     service: 'halo-health-backend',
     environment: process.env.NODE_ENV || 'development'
   },
+  // Always log to console — Railway captures stdout/stderr
   transports: [
-    // Error log file
-    new winston.transports.File({
-      filename: path.join(logDir, 'error.log'),
-      level: 'error',
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-    }),
-    
-    // Combined log file
-    new winston.transports.File({
-      filename: path.join(logDir, 'combined.log'),
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple()
+      ),
     }),
   ],
 });
 
-// Add console transport for non-production environments
+// In development, also write to local log files
 if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple()
-    )
-  }));
+  const path = require('path');
+  const fs = require('fs');
+  const logDir = path.join(__dirname, '../../logs');
+
+  try {
+    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+
+    logger.add(new winston.transports.File({
+      filename: path.join(logDir, 'error.log'),
+      level: 'error',
+      maxsize: 5242880,
+      maxFiles: 5,
+    }));
+
+    logger.add(new winston.transports.File({
+      filename: path.join(logDir, 'combined.log'),
+      maxsize: 5242880,
+      maxFiles: 5,
+    }));
+  } catch (e) {
+    console.warn('Could not create log files:', e.message);
+  }
 }
 
 // Performance monitoring utilities
