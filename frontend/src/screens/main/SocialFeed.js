@@ -46,6 +46,19 @@ const getPostImages = (post) => {
     .filter((url) => typeof url === 'string' && /^https?:\/\//i.test(url));
 };
 
+const getAuthor = (post) => {
+  const author = post.author || post.user || {};
+  const name = author.name || author.display_name || author.full_name || author.username || author.halo_health_id || 'Halo Member';
+  const handle = author.halo_health_id || author.username || 'halo-member';
+
+  return {
+    id: author.id || post.user_id,
+    name,
+    handle,
+    avatarColor: author.avatar_color || COLORS.primary,
+  };
+};
+
 // Memoized Avatar component for better performance in lists
 const Avatar = React.memo(({ initials, color, size = 40 }) => (
   <View style={[
@@ -59,25 +72,22 @@ const Avatar = React.memo(({ initials, color, size = 40 }) => (
 // Memoized PostCard for optimized list rendering
 const PostCard = React.memo(({ post, activeTab, currentUserId, onLike, onSave, onComment, onFollowChange }) => {
   const scoreColor = post.score >= 60 ? COLORS.scoreExcellent : COLORS.scoreAvoid;
-  const author = post.author || post.user || {};
-  const authorName = author.name || author.username || 'User';
-  const authorId = author.id || post.user_id;
-  const initials = authorName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-  const avatarColor = author.avatar_color || COLORS.primary;
+  const author = getAuthor(post);
+  const initials = author.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
   const postImages = getPostImages(post);
-  const canFollowAuthor = activeTab === 'Discover' && authorId && authorId !== currentUserId;
+  const canFollowAuthor = activeTab === 'Discover' && author.id && author.id !== currentUserId;
 
   return (
     <HaloCard style={styles.postCard}>
       <View style={styles.postHeader}>
-        <Avatar initials={initials} color={avatarColor} size={40} />
+        <Avatar initials={initials} color={author.avatarColor} size={40} />
         <View style={styles.postAuthorInfo}>
-          <Text style={styles.postAuthor}>{authorName}</Text>
-          <Text style={styles.postHandle}>@{author.username || 'user'} - {post.time_ago || 'now'}</Text>
+          <Text style={styles.postAuthor}>{author.name}</Text>
+          <Text style={styles.postHandle}>@{author.handle} - {post.time_ago || 'now'}</Text>
         </View>
         {canFollowAuthor ? (
           <FollowButton
-            userId={authorId}
+            userId={author.id}
             initialFollowing={!!post.is_following}
             onFollowChange={onFollowChange}
             style={styles.followButton}
@@ -95,7 +105,7 @@ const PostCard = React.memo(({ post, activeTab, currentUserId, onLike, onSave, o
           {postImages.map((uri, index) => (
             <Image
               key={`${uri}-${index}`}
-              source={{ uri }}
+              source={{ uri: encodeURI(uri) }}
               resizeMode="cover"
               onError={(error) => console.warn('Failed to load post image:', uri, error.nativeEvent)}
               style={[

@@ -34,10 +34,23 @@ const getPostImages = (post) => {
     .filter((url) => typeof url === 'string' && /^https?:\/\//i.test(url));
 };
 
+const getAuthor = (post) => {
+  const author = post?.author || post?.user || {};
+  const name = author.name || author.display_name || author.full_name || author.username || author.halo_health_id || 'Halo Member';
+  const handle = author.halo_health_id || author.username || 'halo-member';
+
+  return {
+    name,
+    handle,
+    avatarUrl: author.avatar_url,
+  };
+};
+
 export default function PostCard({ post, onLike, onComment, onShare, onPress }) {
   const [liked, setLiked] = useState(post.is_liked || false);
   const [likesCount, setLikesCount] = useState(post.likes_count || 0);
   const postImages = getPostImages(post);
+  const author = getAuthor(post);
 
   const handleLike = async () => {
     try {
@@ -84,11 +97,12 @@ export default function PostCard({ post, onLike, onComment, onShare, onPress }) 
       {/* Header */}
       <View style={styles.header}>
         <Image
-          source={{ uri: post.user?.avatar_url || 'https://via.placeholder.com/40' }}
+          source={{ uri: author.avatarUrl || 'https://via.placeholder.com/40' }}
           style={styles.avatar}
         />
         <View style={styles.headerInfo}>
-          <Text style={styles.username}>{post.user?.username || 'User'}</Text>
+          <Text style={styles.username}>{author.name}</Text>
+          <Text style={styles.handle}>@{author.handle}</Text>
           <Text style={styles.timestamp}>{formatTimeAgo(post.created_at)}</Text>
         </View>
         <TouchableOpacity style={styles.moreButton}>
@@ -105,7 +119,7 @@ export default function PostCard({ post, onLike, onComment, onShare, onPress }) 
           {postImages.slice(0, 4).map((url, index) => (
             <Image
               key={index}
-              source={{ uri: url }}
+              source={{ uri: encodeURI(url) }}
               style={[
                 styles.postImage,
                 postImages.length === 1 && styles.singleImage,
@@ -208,6 +222,11 @@ const styles = StyleSheet.create({
   timestamp: {
     fontSize: TYPOGRAPHY.xs,
     color: COLORS.textTertiary,
+    marginTop: 2,
+  },
+  handle: {
+    fontSize: TYPOGRAPHY.xs,
+    color: COLORS.textSecondary,
     marginTop: 2,
   },
   moreButton: {

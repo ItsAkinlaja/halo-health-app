@@ -85,7 +85,7 @@ export default function PostDetails({ route, navigation }) {
                 {postImages.map((uri, index) => (
                   <Image
                     key={index}
-                    source={{ uri }}
+                    source={{ uri: encodeURI(uri) }}
                     resizeMode="cover"
                     onError={(error) => console.warn('Failed to load post detail image:', uri, error.nativeEvent)}
                     style={styles.mediaImage}

@@ -13,6 +13,22 @@ const normalizeImageUrls = (imageUrls) => {
     .filter((url) => typeof url === 'string' && /^https?:\/\//i.test(url));
 };
 
+const formatAuthor = (user, profile) => {
+  if (!user) return null;
+
+  const displayName = profile?.name || user.username || user.halo_health_id || 'Halo Member';
+  const haloUsername = user.halo_health_id || user.username || 'halo-member';
+
+  return {
+    id: user.id,
+    name: displayName,
+    username: haloUsername,
+    halo_health_id: user.halo_health_id,
+    avatar_url: user.avatar_url,
+    bio: user.bio,
+  };
+};
+
 class SocialService {
   // ==================== POSTS ====================
   
@@ -46,6 +62,69 @@ class SocialService {
     return data;
   }
 
+  async hydratePosts(posts, viewerId, followingIds = null) {
+    const postList = Array.isArray(posts) ? posts : [];
+    if (!postList.length) return [];
+
+    const authorIds = [...new Set(postList.map(post => post.user_id).filter(Boolean))];
+
+    const [{ data: users, error: usersError }, { data: profiles, error: profilesError }] = await Promise.all([
+      supabase
+        .from('users')
+        .select('id, username, avatar_url, halo_health_id, bio')
+        .in('id', authorIds),
+      supabase
+        .from('health_profiles')
+        .select('user_id, name, relationship, created_at')
+        .in('user_id', authorIds)
+        .order('created_at', { ascending: true }),
+    ]);
+
+    if (usersError) throw usersError;
+    if (profilesError) console.warn('[SocialService] Failed to hydrate profile names:', profilesError.message);
+
+    const usersById = new Map((users || []).map(user => [user.id, user]));
+    const profilesByUserId = new Map();
+
+    (profiles || []).forEach((profile) => {
+      const existingProfile = profilesByUserId.get(profile.user_id);
+      const isSelfProfile = profile.relationship === 'self';
+
+      if (!existingProfile || isSelfProfile) {
+        profilesByUserId.set(profile.user_id, profile);
+      }
+    });
+
+    let resolvedFollowingIds = followingIds;
+    if (!resolvedFollowingIds && viewerId) {
+      const { data: follows, error: followsError } = await supabase
+        .from('user_follows')
+        .select('following_id')
+        .eq('follower_id', viewerId);
+
+      if (followsError) throw followsError;
+      resolvedFollowingIds = follows?.map(f => f.following_id) || [];
+    }
+
+    return postList.map((post) => {
+      const user = post.user || usersById.get(post.user_id);
+      const profile = profilesByUserId.get(post.user_id);
+      const author = formatAuthor(user, profile);
+
+      return {
+        ...post,
+        user: author,
+        author,
+        image_urls: normalizeImageUrls(post.image_urls),
+        is_liked: Array.isArray(post.is_liked)
+          ? post.is_liked.some(l => l.user_id === viewerId)
+          : !!post.is_liked,
+        is_following: (resolvedFollowingIds || []).includes(post.user_id),
+        likes_count: post.likes_count || 0,
+      };
+    });
+  }
+
   async getPost(postId, userId) {
     try {
       const { data, error } = await supabase
@@ -66,13 +145,12 @@ class SocialService {
           .eq('id', postId)
           .single();
         if (simpleError) throw simpleError;
-        return simpleData;
+        const [post] = await this.hydratePosts([simpleData], userId);
+        return post;
       }
       
-      // Check if current user liked this post
-      data.is_liked = data.is_liked?.some(l => l.user_id === userId) || false;
-      
-      return data;
+      const [post] = await this.hydratePosts([data], userId);
+      return post;
     } catch (error) {
       console.error('[SocialService] getPost failed:', error);
       throw error;
@@ -155,21 +233,10 @@ class SocialService {
         const { data: simpleData, error: simpleError } = await simpleQuery;
           
         if (simpleError) throw simpleError;
-        return (simpleData || []).map(post => ({
-          ...post,
-          is_following: followingIds.includes(post.user_id),
-        }));
+        return this.hydratePosts(simpleData || [], userId, followingIds);
       }
       
-      // Process is_liked for each post
-      const processedPosts = (data || []).map(post => ({
-        ...post,
-        is_liked: post.is_liked?.some(l => l.user_id === userId) || false,
-        is_following: followingIds.includes(post.user_id),
-        likes_count: post.likes_count || 0,
-      }));
-      
-      return processedPosts;
+      return this.hydratePosts(data || [], userId, followingIds);
     } catch (error) {
       console.error('[SocialService] getFeed failed:', error);
       return []; // Return empty array instead of throwing to prevent app crash
