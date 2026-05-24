@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   StatusBar, ActivityIndicator, RefreshControl, Alert,
-  FlatList,
-  Image,
+  FlatList, Image, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -81,7 +80,7 @@ const Avatar = React.memo(({ initials, color, avatarUrl, size = 40 }) => {
 });
 
 // Memoized PostCard for optimized list rendering
-const PostCard = React.memo(({ post, activeTab, currentUserId, onLike, onSave, onComment, onFollowChange }) => {
+const PostCard = React.memo(({ post, activeTab, currentUserId, onLike, onSave, onComment, onShare, onFollowChange }) => {
   const scoreColor = post.score >= 60 ? COLORS.scoreExcellent : COLORS.scoreAvoid;
   const author = getAuthor(post);
   const initials = author.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
@@ -94,7 +93,7 @@ const PostCard = React.memo(({ post, activeTab, currentUserId, onLike, onSave, o
         <Avatar initials={initials} color={author.avatarColor} avatarUrl={author.avatarUrl} size={40} />
         <View style={styles.postAuthorInfo}>
           <Text style={styles.postAuthor}>{author.name}</Text>
-          <Text style={styles.postHandle}>@{author.handle} - {post.time_ago || 'now'}</Text>
+          <Text style={styles.postHandle}>@{author.handle} · {post.time_ago || 'now'}</Text>
         </View>
         {canFollowAuthor ? (
           <FollowButton
@@ -109,7 +108,7 @@ const PostCard = React.memo(({ post, activeTab, currentUserId, onLike, onSave, o
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.postContent}>{post.content || ''}</Text>
+      {!!post.content && <Text style={styles.postContent}>{post.content}</Text>}
 
       {postImages.length > 0 ? (
         <View style={styles.postImages}>
@@ -118,7 +117,7 @@ const PostCard = React.memo(({ post, activeTab, currentUserId, onLike, onSave, o
               key={`${uri}-${index}`}
               source={{ uri: encodeURI(uri) }}
               resizeMode="cover"
-              onError={(error) => console.warn('Failed to load post image:', uri, error.nativeEvent)}
+              onError={() => console.warn('Failed to load post image:', uri)}
               style={[
                 styles.postImage,
                 postImages.length === 1 ? styles.postImageSingle : styles.postImageGrid,
@@ -168,11 +167,11 @@ const PostCard = React.memo(({ post, activeTab, currentUserId, onLike, onSave, o
             {post.likes_count || 0}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => onComment(post.id)}>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => onComment(post)}>
           <Ionicons name="chatbubble-outline" size={20} color={COLORS.textSecondary} />
           <Text style={styles.actionCount}>{post.comments_count || 0}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn}>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => onShare(post)}>
           <Ionicons name="arrow-redo-outline" size={20} color={COLORS.textSecondary} />
           <Text style={styles.actionCount}>{post.shares_count || 0}</Text>
         </TouchableOpacity>
@@ -200,33 +199,42 @@ export default function SocialFeed({ navigation }) {
   const PAGE_SIZE = 10;
 
   const isMounted = React.useRef(true);
+  const activeTabRef = React.useRef(activeTab);
+  const offsetRef = React.useRef(0);
+  const hasMoreRef = React.useRef(true);
+  const loadingMoreRef = React.useRef(false);
 
   React.useEffect(() => {
     isMounted.current = true;
-    return () => {
-      isMounted.current = false;
-    };
+    return () => { isMounted.current = false; };
   }, []);
 
+  // Keep refs in sync so loadPosts always reads fresh values
+  React.useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+  React.useEffect(() => { offsetRef.current = offset; }, [offset]);
+  React.useEffect(() => { hasMoreRef.current = hasMore; }, [hasMore]);
+  React.useEffect(() => { loadingMoreRef.current = loadingMore; }, [loadingMore]);
+
   const loadPosts = useCallback(async (isInitial = true) => {
-    if (!isInitial && (!hasMore || loadingMore)) return;
+    if (!isInitial && (!hasMoreRef.current || loadingMoreRef.current)) return;
 
     try {
       if (isInitial) {
         if (isMounted.current) {
           setLoading(true);
           setOffset(0);
+          offsetRef.current = 0;
         }
       } else {
         if (isMounted.current) setLoadingMore(true);
       }
 
-      const filter = activeTab === 'Following' ? 'following' : 'all';
-      const currentOffset = isInitial ? 0 : offset;
-      
+      const filter = activeTabRef.current === 'Following' ? 'following' : 'all';
+      const currentOffset = isInitial ? 0 : offsetRef.current;
+
       const response = await socialService.getFeed(filter, PAGE_SIZE, currentOffset);
-      const newPosts = response.posts || [];
-      
+      const newPosts = response?.posts || [];
+
       if (!isMounted.current) return;
 
       if (isInitial) {
@@ -234,9 +242,12 @@ export default function SocialFeed({ navigation }) {
       } else {
         setPosts(prev => [...prev, ...newPosts]);
       }
-      
+
       setHasMore(newPosts.length === PAGE_SIZE);
-      setOffset(currentOffset + PAGE_SIZE);
+      hasMoreRef.current = newPosts.length === PAGE_SIZE;
+      const nextOffset = currentOffset + PAGE_SIZE;
+      setOffset(nextOffset);
+      offsetRef.current = nextOffset;
     } catch (error) {
       console.error('Failed to load posts:', error?.message || error);
       if (isInitial && isMounted.current) Alert.alert('Error', 'Failed to load community posts. Pull down to retry.');
@@ -244,10 +255,11 @@ export default function SocialFeed({ navigation }) {
       if (isMounted.current) {
         setLoading(false);
         setLoadingMore(false);
+        loadingMoreRef.current = false;
         setRefreshing(false);
       }
     }
-  }, [activeTab, offset, hasMore, loadingMore]);
+  }, []); // stable — reads from refs
 
   useEffect(() => {
     loadPosts(true);
@@ -296,9 +308,20 @@ export default function SocialFeed({ navigation }) {
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, is_saved: !p.is_saved } : p));
   }, []);
 
-  const handleComment = useCallback((postId) => {
-    navigation.navigate('PostDetails', { postId });
+  const handleComment = useCallback((post) => {
+    navigation.navigate('PostDetails', { postId: post.id, post });
   }, [navigation]);
+
+  const handleShare = useCallback(async (post) => {
+    try {
+      await Share.share({
+        message: post.content || 'Check out this post on Halo Health!',
+        title: 'Halo Health Post',
+      });
+    } catch (error) {
+      console.error('Share failed:', error);
+    }
+  }, []);
 
   const handleFollowChange = useCallback((userId, following) => {
     setPosts(prev => prev.map(post => (
@@ -318,14 +341,18 @@ export default function SocialFeed({ navigation }) {
   }, [loadPosts]);
 
   const handleTabPress = useCallback((tab) => {
-    if (tab === activeTab) return;
-
+    if (tab === activeTabRef.current) return;
+    activeTabRef.current = tab;
     setActiveTab(tab);
     setPosts([]);
     setOffset(0);
+    offsetRef.current = 0;
     setHasMore(true);
+    hasMoreRef.current = true;
     setLoading(true);
-  }, [activeTab]);
+    // Trigger load with new tab
+    setTimeout(() => loadPosts(true), 0);
+  }, [loadPosts]);
 
   const renderHeader = () => (
     <>
@@ -400,6 +427,7 @@ export default function SocialFeed({ navigation }) {
               onLike={handleLike} 
               onSave={handleSave}
               onComment={handleComment}
+              onShare={handleShare}
               onFollowChange={handleFollowChange}
             />
           )}

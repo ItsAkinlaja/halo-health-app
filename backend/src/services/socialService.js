@@ -3,11 +3,29 @@ const { supabase } = require('../utils/database');
 const normalizeImageUrls = (imageUrls) => {
   if (!imageUrls) return [];
 
+  // Handle Postgres array string format: {url1,url2}
+  if (typeof imageUrls === 'string') {
+    const trimmed = imageUrls.trim();
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      imageUrls = trimmed
+        .slice(1, -1)
+        .split(',')
+        .map(u => u.replace(/^"|"$/g, '').trim())
+        .filter(Boolean);
+    } else if (trimmed.startsWith('[')) {
+      try { imageUrls = JSON.parse(trimmed); } catch { imageUrls = [trimmed]; }
+    } else if (trimmed) {
+      imageUrls = [trimmed];
+    } else {
+      return [];
+    }
+  }
+
   const list = Array.isArray(imageUrls) ? imageUrls : [imageUrls];
 
   return list
     .map((image) => {
-      if (typeof image === 'string') return image;
+      if (typeof image === 'string') return image.trim();
       return image?.url || image?.uri || null;
     })
     .filter((url) => typeof url === 'string' && /^https?:\/\//i.test(url));
