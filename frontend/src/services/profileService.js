@@ -75,6 +75,11 @@ export const profileService = {
     return res.data ?? res;
   },
 
+  async acceptTerms(userId, version = null) {
+    const res = await api.post(`/api/profiles/user/${userId}/accept-terms`, { version });
+    return res.data ?? res;
+  },
+
   async getAnalytics(profileId, period = '30d') {
     const res = await api.get(`/api/profiles/${profileId}/analytics?period=${period}`);
     return res.data ?? res;

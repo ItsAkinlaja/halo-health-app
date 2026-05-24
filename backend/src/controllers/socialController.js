@@ -24,6 +24,47 @@ class SocialController {
     }
   }
 
+  // POST /api/social/uploads/images
+  async uploadImages(req, res, next) {
+    try {
+      const userId = req.user.id;
+      if (!req.files || !req.files.length) {
+        return res.status(400).json({ success: false, message: 'No files uploaded' });
+      }
+
+      const urls = [];
+
+      for (let i = 0; i < req.files.length; i++) {
+        const file = req.files[i];
+        const buffer = await require('sharp')(file.buffer)
+          .resize({ width: 2048, withoutEnlargement: true })
+          .jpeg({ quality: 80 })
+          .toBuffer();
+
+        const timestamp = Date.now();
+        const path = `post-images/${userId}/${timestamp}-${i}.jpg`;
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('post-images')
+          .upload(path, buffer, { contentType: 'image/jpeg', upsert: true });
+
+        if (uploadError) {
+          console.error('[SocialController] Supabase upload error:', uploadError);
+          continue;
+        }
+
+        const { data: publicData } = supabase.storage.from('post-images').getPublicUrl(path);
+        const publicUrl = publicData?.publicUrl || null;
+
+        if (publicUrl) urls.push(publicUrl);
+      }
+
+      res.json({ success: true, data: { urls } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getPost(req, res, next) {
     try {
       const userId = req.user.id;

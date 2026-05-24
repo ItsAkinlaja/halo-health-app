@@ -1,10 +1,30 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { useAuth } from '../../context/AuthContext';
+import storage, { STORAGE_KEYS } from '../../utils/storage';
+import { profileService } from '../../services/profileService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY, SPACING } from '../../styles/theme';
 
 export default function Terms({ navigation }) {
+  const { user } = useAuth();
+  const requireAccept = navigation?.route?.params?.requireAccept;
+
+  const handleAccept = async () => {
+    try {
+      // If user is authenticated, persist on server and locally
+      if (user?.id) {
+        await profileService.acceptTerms(user.id, 'v2026-05-24');
+      }
+      await storage.setItem(STORAGE_KEYS.TERMS_ACCEPTED, true);
+      Alert.alert('Thanks', 'Terms accepted');
+      navigation.goBack();
+    } catch (err) {
+      console.error('Failed to accept terms:', err);
+      Alert.alert('Error', 'Failed to accept terms. Please try again.');
+    }
+  };
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
@@ -57,6 +77,13 @@ export default function Terms({ navigation }) {
         <Text style={styles.paragraph}>
           For questions about these terms, contact us at legal@halohealth.com
         </Text>
+        {requireAccept && (
+          <View style={{ marginTop: 24 }}>
+            <TouchableOpacity style={styles.acceptBtn} onPress={handleAccept}>
+              <Text style={styles.acceptText}>I Agree</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -90,5 +117,16 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.sm,
     color: COLORS.textSecondary,
     lineHeight: 22,
+  },
+  acceptBtn: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.md,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  acceptText: {
+    color: COLORS.white,
+    fontWeight: '700',
+    fontSize: TYPOGRAPHY.base,
   },
 });

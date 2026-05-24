@@ -1,29 +1,40 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../styles/theme';
+import { productService } from '../../services/productService';
+import { useCart } from '../../context/CartContext';
 
 const CATEGORIES = ['All', 'Wellness', 'Pets', 'Baby', 'Home', 'Food'];
 
-const PRODUCTS = [
-  { id: '1', name: 'Halo Clean Label Multivitamin', category: 'Wellness', price: '$24.00', score: 92, icon: 'fitness-outline' },
-  { id: '2', name: 'Pet Digestive Bites', category: 'Pets', price: '$18.00', score: 88, icon: 'paw-outline' },
-  { id: '3', name: 'Baby Safe Wipes', category: 'Baby', price: '$14.00', score: 95, icon: 'happy-outline' },
-  { id: '4', name: 'Kitchen Air Filter', category: 'Home', price: '$79.00', score: 90, icon: 'home-outline' },
-  { id: '5', name: 'Organic Snack Pack', category: 'Food', price: '$12.50', score: 84, icon: 'nutrition-outline' },
-  { id: '6', name: 'Skin Support Serum', category: 'Wellness', price: '$32.00', score: 86, icon: 'sparkles-outline' },
-];
+const PRODUCTS = [];
 
 export default function HaloStore({ navigation }) {
   const [activeCategory, setActiveCategory] = useState('All');
-  const [cart, setCart] = useState([]);
+  const [products, setProducts] = useState([]);
+  const { items: cart, addItem, removeItem, subtotal } = useCart();
 
-  const filtered = useMemo(() => PRODUCTS.filter((item) => activeCategory === 'All' || item.category === activeCategory), [activeCategory]);
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const cats = await productService.getProductsByCategory(activeCategory === 'All' ? '' : activeCategory, { limit: 24 });
+        if (!mounted) return;
+        // Backend may return array or object
+        const list = Array.isArray(cats) ? cats : cats?.products || [];
+        setProducts(list);
+      } catch (err) {
+        console.warn('Failed loading products for category', activeCategory, err.message);
+      }
+    };
+    load();
+    return () => { mounted = false; };
+  }, [activeCategory]);
 
-  const subtotal = cart.reduce((sum, item) => sum + Number(item.price.replace('$', '')), 0).toFixed(2);
+  const filtered = useMemo(() => products.filter((item) => activeCategory === 'All' || item.category === activeCategory), [products, activeCategory]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -69,12 +80,12 @@ export default function HaloStore({ navigation }) {
                   <Text style={styles.scoreLabel}>clean score</Text>
                 </View>
                 <View style={styles.priceRow}>
-                  <Text style={styles.price}>{product.price}</Text>
+                  <Text style={styles.price}>{product.price ?? product.price_formatted ?? '$0.00'}</Text>
                   <Button
                     title={inCart ? 'Added' : 'Add'}
                     size="small"
                     variant={inCart ? 'secondary' : 'primary'}
-                    onPress={() => setCart((prev) => inCart ? prev.filter((item) => item.id !== product.id) : [...prev, product])}
+                    onPress={() => inCart ? removeItem(product.id) : addItem(product)}
                   />
                 </View>
               </Card>
@@ -85,9 +96,9 @@ export default function HaloStore({ navigation }) {
         <Card style={styles.checkoutCard} variant="elevated">
           <View>
             <Text style={styles.checkoutTitle}>Cart</Text>
-            <Text style={styles.checkoutText}>{cart.length} item{cart.length === 1 ? '' : 's'} · ${subtotal}</Text>
+            <Text style={styles.checkoutText}>{cart.length} item{cart.length === 1 ? '' : 's'} · ${subtotal.toFixed(2)}</Text>
           </View>
-          <Button title="Checkout" onPress={() => navigation.navigate('ShoppingList')} />
+          <Button title="Checkout" onPress={() => navigation.navigate('Checkout')} />
         </Card>
       </ScrollView>
     </SafeAreaView>

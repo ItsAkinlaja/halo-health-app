@@ -41,6 +41,12 @@ router.post('/user/:userId/photo', upload.single('photo'), [
   validate,
 ], catchAsync(profileController.uploadUserPhoto));
 
+router.post('/user/:userId/accept-terms', [
+  param('userId').isUUID().withMessage('Invalid user ID format'),
+  body('version').optional().isString(),
+  validate,
+], catchAsync(profileController.acceptTerms));
+
 // Family profiles list + create
 router.get('/', [
   query('userId').optional().isUUID().withMessage('Invalid user ID format'),

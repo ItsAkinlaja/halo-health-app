@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, useMemo } from 'react';
 import { profileService } from '../services/profileService';
 import storage, { STORAGE_KEYS } from '../utils/storage';
-import { scheduleDailyNotifications } from '../utils/notifications';
+import { scheduleDailyNotifications, cancelScheduledNotifications } from '../utils/notifications';
 
 // Initial state
 const initialState = {
@@ -142,9 +142,20 @@ export function AppProvider({ children }) {
 
   // Schedule daily notifications whenever activeProfile changes
   useEffect(() => {
-    if (state.activeProfile) {
-      scheduleDailyNotifications(state.activeProfile);
-    }
+    const run = async () => {
+      const enabled = await storage.getItem(STORAGE_KEYS.NOTIFICATIONS_ENABLED);
+      if (!enabled) {
+        // If notifications not enabled, ensure any stored schedules are cancelled
+        await cancelScheduledNotifications();
+        return;
+      }
+
+      if (state.activeProfile) {
+        await scheduleDailyNotifications(state.activeProfile);
+      }
+    };
+
+    run();
   }, [state.activeProfile]);
 
   // Memoize actions so consumers don't re-render when the provider re-renders for unrelated reasons
@@ -161,6 +172,24 @@ export function AppProvider({ children }) {
     setLoading: (isLoading) => dispatch({ type: ActionTypes.SET_LOADING, payload: isLoading }),
     setError: (error) => dispatch({ type: ActionTypes.SET_ERROR, payload: error }),
     clearError: () => dispatch({ type: ActionTypes.CLEAR_ERROR }),
+    enableNotifications: async () => {
+      try {
+        await storage.setItem(STORAGE_KEYS.NOTIFICATIONS_ENABLED, true);
+        if (state.activeProfile) {
+          await scheduleDailyNotifications(state.activeProfile);
+        }
+      } catch (err) {
+        console.warn('Failed to enable notifications', err);
+      }
+    },
+    disableNotifications: async () => {
+      try {
+        await storage.setItem(STORAGE_KEYS.NOTIFICATIONS_ENABLED, false);
+        await cancelScheduledNotifications();
+      } catch (err) {
+        console.warn('Failed to disable notifications', err);
+      }
+    },
   }), [dispatch]);
 
   const value = {

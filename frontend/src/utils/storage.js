@@ -5,15 +5,19 @@ export const STORAGE_KEYS = {
   USER_SESSION: 'userSession',
   ONBOARDING_COMPLETED: 'onboardingCompleted',
   MEDICAL_DISCLAIMER_ACCEPTED: 'medicalDisclaimerAccepted',
+  TERMS_ACCEPTED: 'termsAccepted',
   PROFILE_SETUP_COMPLETED: 'profileSetupCompleted',
   ACTIVE_PROFILE_ID: 'activeProfileId',
   ACTIVE_PROFILE: 'activeProfile',
   APP_SETTINGS: 'appSettings',
+  NOTIFICATIONS_ENABLED: 'notificationsEnabled',
+  CART: 'cart',
   BIOMETRIC_ENABLED: 'biometricEnabled',
   BIOMETRIC_EMAIL: 'biometricEmail',
   BIOMETRIC_PASSWORD: 'biometricPassword',
   LANGUAGE: 'language',
   ONBOARDING_DATA: 'onboardingData',
+  SCHEDULED_NOTIFICATION_IDS: 'scheduledNotificationIds',
 };
 
 // Get item from storage

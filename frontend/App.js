@@ -16,6 +16,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { LanguageProvider } from './src/context/LanguageContext';
 import { AppProvider } from './src/context/AppContext';
+import { CartProvider } from './src/context/CartContext';
 import { AuthProvider } from './src/context/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import ErrorBoundary from './src/components/common/ErrorBoundary';
@@ -34,10 +35,12 @@ export default function App() {
           <LanguageProvider>
             <AuthProvider>
               <AppProvider>
-                <NavigationContainer>
-                  <StatusBar style="auto" />
-                  <AppNavigator />
-                </NavigationContainer>
+                <CartProvider>
+                  <NavigationContainer>
+                    <StatusBar style="auto" />
+                    <AppNavigator />
+                  </NavigationContainer>
+                </CartProvider>
               </AppProvider>
             </AuthProvider>
           </LanguageProvider>

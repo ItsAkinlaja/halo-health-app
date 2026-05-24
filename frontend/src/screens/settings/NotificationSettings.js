@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../components/common/Card';
+import { Button } from '../../components/common/Button';
+import { useAppContext } from '../../context/AppContext';
+import storage, { STORAGE_KEYS } from '../../utils/storage';
 import { COLORS, TYPOGRAPHY, SPACING } from '../../styles/theme';
 
 export default function NotificationSettings({ navigation }) {
+  const { enableNotifications, disableNotifications } = useAppContext();
+  const [enabled, setEnabled] = useState(false);
   const [settings, setSettings] = useState({
     productRecalls: true,
     healthAlerts: true,
@@ -14,6 +19,22 @@ export default function NotificationSettings({ navigation }) {
     weeklyReports: true,
     promotions: false,
   });
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      const val = await storage.getItem(STORAGE_KEYS.NOTIFICATIONS_ENABLED);
+      if (!mounted) return;
+      setEnabled(Boolean(val));
+    };
+    load();
+    return () => { mounted = false; };
+  }, []);
+
+  const toggleTop = async (val) => {
+    setEnabled(val);
+    if (val) await enableNotifications(); else await disableNotifications();
+  };
 
   const toggle = (key) => setSettings(prev => ({ ...prev, [key]: !prev[key] }));
 
@@ -51,6 +72,11 @@ export default function NotificationSettings({ navigation }) {
         <View style={{ width: 40 }} />
       </View>
 
+      <View style={styles.topToggleRow}>
+        <Text style={styles.topToggleLabel}>Enable daily reminders</Text>
+        <Switch value={enabled} onValueChange={toggleTop} />
+      </View>
+
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {sections.map((section, idx) => (
           <View key={idx} style={styles.section}>
@@ -71,6 +97,8 @@ export default function NotificationSettings({ navigation }) {
             </Card>
           </View>
         ))}
+
+        <Button title="Manage advanced settings" onPress={() => {}} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -90,6 +118,8 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: TYPOGRAPHY.lg, fontWeight: '700', color: COLORS.textPrimary },
+  topToggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: SPACING.base },
+  topToggleLabel: { fontSize: TYPOGRAPHY.base, fontWeight: '700' },
   scroll: { flex: 1 },
   content: { padding: SPACING.base },
   section: { marginBottom: SPACING.lg },

@@ -97,6 +97,16 @@ export default function Register({ navigation }) {
       return;
     }
 
+    // Ensure terms accepted
+    const termsAccepted = await storage.getItem(STORAGE_KEYS.TERMS_ACCEPTED);
+    if (!termsAccepted) {
+      Alert.alert('Please accept Terms', 'You must accept the Terms of Service before creating an account.', [
+        { text: 'View Terms', onPress: () => navigation.navigate('Terms', { requireAccept: true }) },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Get onboarding data from storage

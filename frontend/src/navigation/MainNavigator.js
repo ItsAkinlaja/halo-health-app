@@ -52,6 +52,7 @@ import Wallet from '../screens/profile/Wallet';
 import HomeEnvironmentAudit from '../screens/main/HomeEnvironmentAudit';
 import Challenges from '../screens/main/Challenges';
 import ShoppingListUI from '../screens/main/ShoppingListUI';
+import Checkout from '../screens/main/Checkout';
 import { COLORS, TYPOGRAPHY, SHADOWS, RADIUS, SPACING } from '../styles/theme';
 
 const Tab = createBottomTabNavigator();
@@ -209,6 +210,7 @@ const MainNavigator = () => {
       <Stack.Screen name="HomeEnvironmentAudit" component={HomeEnvironmentAudit} />
       <Stack.Screen name="Challenges" component={Challenges} />
       <Stack.Screen name="ShoppingList" component={ShoppingListUI} />
+      <Stack.Screen name="Checkout" component={Checkout} />
     </Stack.Navigator>
   );
 };

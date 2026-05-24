@@ -1,4 +1,5 @@
 import * as Notifications from 'expo-notifications';
+import storage, { STORAGE_KEYS } from './storage';
 
 // Configure notification behavior for foreground
 Notifications.setNotificationHandler({
@@ -28,9 +29,18 @@ export async function scheduleDailyNotifications(profile) {
       return false;
     }
 
-    // 2. Clear previously scheduled notifications for clean start
-    await Notifications.cancelAllScheduledNotificationsAsync();
-    console.log('[Notifications] Cancelled all previously scheduled notifications.');
+    // 2. Clear previously scheduled notifications saved in storage
+    try {
+      const existing = await storage.getItem(STORAGE_KEYS.SCHEDULED_NOTIFICATION_IDS);
+      if (Array.isArray(existing) && existing.length) {
+        await Promise.all(
+          existing.map((id) => Notifications.cancelScheduledNotificationAsync(id))
+        );
+        console.log('[Notifications] Cancelled previously scheduled notifications from storage.');
+      }
+    } catch (err) {
+      console.warn('[Notifications] Failed to cancel stored notifications:', err);
+    }
 
     if (!profile) {
       console.log('[Notifications] No active profile; skipping scheduling.');
@@ -102,8 +112,10 @@ export async function scheduleDailyNotifications(profile) {
       };
     }
 
-    // Schedule 9:00 AM daily
-    await Notifications.scheduleNotificationAsync({
+    // Schedule notifications and collect their IDs
+    const scheduledIds = [];
+
+    const morningId = await Notifications.scheduleNotificationAsync({
       content: morningMsg,
       trigger: {
         hour: 9,
@@ -111,9 +123,9 @@ export async function scheduleDailyNotifications(profile) {
         repeats: true,
       },
     });
+    scheduledIds.push(morningId);
 
-    // Schedule 1:30 PM daily
-    await Notifications.scheduleNotificationAsync({
+    const afternoonId = await Notifications.scheduleNotificationAsync({
       content: afternoonMsg,
       trigger: {
         hour: 13,
@@ -121,9 +133,9 @@ export async function scheduleDailyNotifications(profile) {
         repeats: true,
       },
     });
+    scheduledIds.push(afternoonId);
 
-    // Schedule 7:00 PM daily
-    await Notifications.scheduleNotificationAsync({
+    const eveningId = await Notifications.scheduleNotificationAsync({
       content: eveningMsg,
       trigger: {
         hour: 19,
@@ -131,11 +143,35 @@ export async function scheduleDailyNotifications(profile) {
         repeats: true,
       },
     });
+    scheduledIds.push(eveningId);
 
-    console.log(`[Notifications] Scheduled 3 daily local notifications for profile: ${name}`);
-    return true;
+    // Persist scheduled IDs so we can cancel/reschedule later
+    try {
+      await storage.setItem(STORAGE_KEYS.SCHEDULED_NOTIFICATION_IDS, scheduledIds);
+    } catch (err) {
+      console.warn('[Notifications] Failed to persist scheduled notification IDs:', err);
+    }
+
+    console.log(`[Notifications] Scheduled 3 daily local notifications for profile: ${name}`, scheduledIds);
+    return scheduledIds;
   } catch (error) {
     console.error('[Notifications] Error scheduling daily notifications:', error);
+    return false;
+  }
+}
+
+export async function cancelScheduledNotifications() {
+  try {
+    const existing = await storage.getItem(STORAGE_KEYS.SCHEDULED_NOTIFICATION_IDS);
+    if (Array.isArray(existing) && existing.length) {
+      await Promise.all(existing.map((id) => Notifications.cancelScheduledNotificationAsync(id)));
+      await storage.removeItem(STORAGE_KEYS.SCHEDULED_NOTIFICATION_IDS);
+      console.log('[Notifications] Cancelled and removed stored scheduled notification IDs.');
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.warn('[Notifications] Error cancelling scheduled notifications:', err);
     return false;
   }
 }

@@ -4,11 +4,12 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../styles/theme';
 import { socialService } from '../../services/socialService';
+import { api } from '../../services/api';
 
 export default function PostComposer({ onPostCreated, onCancel }) {
   const [content, setContent] = useState('');
   const [overlayText, setOverlayText] = useState('');
-  const [images, setImages] = useState([]);
+  const [images, setImages] = useState([]); // [{ uri, caption }]
   const [isPublic, setIsPublic] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -20,9 +21,30 @@ export default function PostComposer({ onPostCreated, onCancel }) {
 
     setIsLoading(true);
     try {
+      let imageUrls = images.map(img => ({ url: img.uri, caption: img.caption || '' }));
+
+      // If there are local URIs, upload them first
+      const needsUpload = imageUrls.some(i => !i.url.startsWith('http'));
+      if (needsUpload) {
+        try {
+          const form = new FormData();
+          images.forEach((img, idx) => {
+            const uri = img.uri;
+            const filename = uri.split('/').pop() || `photo-${Date.now()}-${idx}.jpg`;
+            form.append('images', { uri, name: filename, type: 'image/jpeg' });
+          });
+
+          const uploadRes = await api.post('/api/social/uploads/images', form);
+          const returned = uploadRes?.data?.urls || uploadRes?.urls || [];
+          imageUrls = images.map((img, idx) => ({ url: returned[idx] || img.uri, caption: img.caption || '' }));
+        } catch (uploadErr) {
+          console.warn('Image upload failed, proceeding with local URIs:', uploadErr);
+        }
+      }
+
       const postData = {
         content: [content.trim(), overlayText.trim()].filter(Boolean).join('\n\n'),
-        image_urls: images,
+        image_urls: imageUrls,
         is_public: isPublic,
         tags: extractHashtags(content),
       };
@@ -63,12 +85,16 @@ export default function PostComposer({ onPostCreated, onCancel }) {
 
     if (result.canceled) return;
 
-    const nextImages = result.assets.map((asset) => asset.uri);
+    const nextImages = result.assets.map((asset) => ({ uri: asset.uri, caption: '' }));
     setImages((prev) => [...prev, ...nextImages].slice(0, 4));
   };
 
   const removeImage = (index) => {
     setImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const setImageCaption = (index, text) => {
+    setImages(prev => prev.map((img, i) => i === index ? { ...img, caption: text } : img));
   };
 
   return (
@@ -81,11 +107,11 @@ export default function PostComposer({ onPostCreated, onCancel }) {
         <Text style={styles.title}>Create Post</Text>
         <TouchableOpacity 
           onPress={handlePost} 
-          disabled={isLoading || !content.trim()}
+          disabled={isLoading || (!content.trim() && images.length === 0 && !overlayText.trim())}
         >
           <Text style={[
             styles.postButton,
-            (!content.trim() || isLoading) && styles.postButtonDisabled
+            (isLoading || (!content.trim() && images.length === 0 && !overlayText.trim())) && styles.postButtonDisabled
           ]}>
             {isLoading ? 'Posting...' : 'Post'}
           </Text>
@@ -118,20 +144,23 @@ export default function PostComposer({ onPostCreated, onCancel }) {
         {/* Image Preview */}
         {images.length > 0 && (
           <View style={styles.imagesContainer}>
-            {images.map((uri, index) => (
+            {images.map((img, index) => (
               <View key={index} style={styles.imageWrapper}>
-                <Image source={{ uri }} style={styles.image} />
-                {overlayText.trim() ? (
-                  <View style={styles.imageOverlay}>
-                    <Text style={styles.imageOverlayText} numberOfLines={3}>{overlayText.trim()}</Text>
-                  </View>
-                ) : null}
+                <Image source={{ uri: img.uri }} style={styles.image} />
                 <TouchableOpacity 
                   style={styles.removeImageButton}
                   onPress={() => removeImage(index)}
                 >
                   <Ionicons name="close-circle" size={24} color={COLORS.white} />
                 </TouchableOpacity>
+                <TextInput
+                  placeholder="Add a caption..."
+                  placeholderTextColor={COLORS.textTertiary}
+                  style={styles.imageCaptionInput}
+                  value={img.caption}
+                  onChangeText={(t) => setImageCaption(index, t)}
+                  maxLength={220}
+                />
               </View>
             ))}
           </View>
@@ -239,6 +268,18 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: COLORS.border,
+  },
+  imageCaptionInput: {
+    position: 'absolute',
+    left: 8,
+    right: 8,
+    bottom: 8,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.sm,
+    fontSize: TYPOGRAPHY.xs,
+    color: COLORS.textPrimary,
   },
   imageOverlay: {
     position: 'absolute',

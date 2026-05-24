@@ -6,6 +6,8 @@ const { authMiddleware } = require('../middleware/auth');
 const { catchAsync } = require('../middleware/errorHandler');
 
 const router = express.Router();
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // Apply authentication middleware to all routes
 router.use(authMiddleware);
@@ -240,6 +242,9 @@ router.get('/hashtags/:tag', [
   query('offset').optional().isInt({ min: 0 }),
   validateRequest
 ], catchAsync(socialController.getPostsByHashtag));
+
+// Upload images for posts (multipart/form-data: images[])
+router.post('/uploads/images', upload.array('images', 8), catchAsync(socialController.uploadImages));
 
 // Search hashtags
 router.get('/hashtags/search', [

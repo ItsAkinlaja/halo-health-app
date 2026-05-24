@@ -114,24 +114,41 @@ class ProfileController {
       if (!req.file) {
         throw new ValidationError('Photo is required');
       }
-
+      // Resize/normalize and upload to Supabase Storage
       const imageBuffer = await sharp(req.file.buffer)
         .resize(512, 512, { fit: 'cover' })
         .jpeg({ quality: 85 })
         .toBuffer();
 
-      const avatarUrl = `data:image/jpeg;base64,${imageBuffer.toString('base64')}`;
+      const timestamp = Date.now();
+      const path = `avatars/${userId}/${timestamp}.jpg`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, imageBuffer, { contentType: 'image/jpeg', upsert: true });
+
+      if (uploadError) {
+        console.error('[ProfileController] Supabase storage upload error:', uploadError);
+        throw new ValidationError('Failed to upload avatar');
+      }
+
+      const { data: publicData } = supabase.storage.from('avatars').getPublicUrl(path);
+      const publicUrl = publicData?.publicUrl || null;
+
+      if (!publicUrl) {
+        throw new ValidationError('Failed to obtain public URL for uploaded avatar');
+      }
 
       const { error } = await supabase
         .from('users')
-        .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
+        .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
         .eq('id', userId);
 
       if (error) {
         throw new ValidationError(error.message);
       }
 
-      res.json({ status: 'success', data: { avatar_url: avatarUrl } });
+      res.json({ status: 'success', data: { avatar_url: publicUrl } });
     } catch (error) {
       next(error);
     }
@@ -378,6 +395,41 @@ class ProfileController {
 
       if (error) throw new ValidationError(error.message);
       res.json({ status: 'success', data: data || [] });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // POST /api/profiles/user/:userId/accept-terms
+  async acceptTerms(req, res, next) {
+    try {
+      const { userId } = req.params;
+      if (userId !== req.user.id) throw new ForbiddenError();
+
+      const { version } = req.body;
+
+      // Fetch current user metadata
+      const { data: userRow, error: fetchError } = await supabase
+        .from('users')
+        .select('user_metadata')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (fetchError) throw new ValidationError(fetchError.message);
+
+      const metadata = userRow?.user_metadata || {};
+      metadata.termsAccepted = true;
+      metadata.termsAcceptedAt = new Date().toISOString();
+      if (version) metadata.termsVersion = version;
+
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ user_metadata: metadata, updated_at: new Date().toISOString() })
+        .eq('id', userId);
+
+      if (updateError) throw new ValidationError(updateError.message);
+
+      res.json({ status: 'success', data: { user_metadata: metadata } });
     } catch (error) {
       next(error);
     }
