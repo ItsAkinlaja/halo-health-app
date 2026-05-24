@@ -16,7 +16,7 @@ const normalizeImageUrls = (imageUrls) => {
 const formatAuthor = (user, profile) => {
   if (!user) return null;
 
-  const displayName = profile?.name || user.username || user.halo_health_id || 'Halo Member';
+  const displayName = profile?.name || user.full_name || user.name || user.username || user.halo_health_id || 'Halo Member';
   const haloUsername = user.halo_health_id || user.username || 'halo-member';
 
   return {
@@ -58,8 +58,10 @@ class SocialService {
     
     // Create activity entry
     await this.createActivity(userId, 'post', { post_id: data.id });
-    
-    return data;
+
+    // Hydrate the post so the response includes author info and normalized image_urls
+    const [hydratedPost] = await this.hydratePosts([data], userId);
+    return hydratedPost || data;
   }
 
   async hydratePosts(posts, viewerId, followingIds = null) {
@@ -71,7 +73,7 @@ class SocialService {
     const [{ data: users, error: usersError }, { data: profiles, error: profilesError }] = await Promise.all([
       supabase
         .from('users')
-        .select('id, username, avatar_url, halo_health_id, bio')
+        .select('id, username, avatar_url, halo_health_id, bio, full_name, name')
         .in('id', authorIds),
       supabase
         .from('health_profiles')

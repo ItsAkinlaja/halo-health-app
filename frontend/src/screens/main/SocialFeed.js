@@ -55,19 +55,30 @@ const getAuthor = (post) => {
     id: author.id || post.user_id,
     name,
     handle,
+    avatarUrl: author.avatar_url || null,
     avatarColor: author.avatar_color || COLORS.primary,
   };
 };
 
 // Memoized Avatar component for better performance in lists
-const Avatar = React.memo(({ initials, color, size = 40 }) => (
-  <View style={[
-    styles.avatar,
-    { width: size, height: size, borderRadius: size / 2, backgroundColor: color },
-  ]}>
-    <Text style={[styles.avatarText, { fontSize: size * 0.35 }]}>{initials}</Text>
-  </View>
-));
+const Avatar = React.memo(({ initials, color, avatarUrl, size = 40 }) => {
+  if (avatarUrl) {
+    return (
+      <Image
+        source={{ uri: avatarUrl }}
+        style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}
+      />
+    );
+  }
+  return (
+    <View style={[
+      styles.avatar,
+      { width: size, height: size, borderRadius: size / 2, backgroundColor: color },
+    ]}>
+      <Text style={[styles.avatarText, { fontSize: size * 0.35 }]}>{initials}</Text>
+    </View>
+  );
+});
 
 // Memoized PostCard for optimized list rendering
 const PostCard = React.memo(({ post, activeTab, currentUserId, onLike, onSave, onComment, onFollowChange }) => {
@@ -80,7 +91,7 @@ const PostCard = React.memo(({ post, activeTab, currentUserId, onLike, onSave, o
   return (
     <HaloCard style={styles.postCard}>
       <View style={styles.postHeader}>
-        <Avatar initials={initials} color={author.avatarColor} size={40} />
+        <Avatar initials={initials} color={author.avatarColor} avatarUrl={author.avatarUrl} size={40} />
         <View style={styles.postAuthorInfo}>
           <Text style={styles.postAuthor}>{author.name}</Text>
           <Text style={styles.postHandle}>@{author.handle} - {post.time_ago || 'now'}</Text>
@@ -241,6 +252,14 @@ export default function SocialFeed({ navigation }) {
   useEffect(() => {
     loadPosts(true);
   }, [activeTab]);
+
+  // Reload feed when screen comes back into focus (e.g. after creating a post)
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadPosts(true);
+    });
+    return unsubscribe;
+  }, [navigation, activeTab]);
 
   const handleLike = useCallback(async (postId) => {
     const post = posts.find(p => p.id === postId);

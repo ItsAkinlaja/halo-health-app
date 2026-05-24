@@ -42,7 +42,7 @@ const getAuthor = (post) => {
   return {
     name,
     handle,
-    avatarUrl: author.avatar_url,
+    avatarUrl: author.avatar_url || null,
   };
 };
 

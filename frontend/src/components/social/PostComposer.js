@@ -61,9 +61,10 @@ export default function PostComposer({ onPostCreated, onCancel, initialImages, o
 
           const uploadRes = await api.post('/api/social/uploads/images', form);
           const returned = uploadRes?.data?.urls || uploadRes?.urls || [];
-          if (returned.length !== localImages.length) {
+          if (!returned.length) {
             throw new Error('Image upload failed. Please try again.');
           }
+          // Map uploaded URLs back in order (local images replaced, http images kept)
           let uploadedIndex = 0;
           imageUrls = images.map((img) => {
             if (img.uri.startsWith('http')) return img.uri;
