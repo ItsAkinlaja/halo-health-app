@@ -248,6 +248,14 @@ router.get('/hashtags/search', [
   validateRequest
 ], catchAsync(socialController.searchHashtags));
 
+// Unified search across people, posts, hashtags, and groups
+router.get('/search', [
+  query('q').notEmpty().withMessage('Search query is required'),
+  query('limit').optional().isInt({ min: 1, max: 50 }),
+  query('offset').optional().isInt({ min: 0 }),
+  validateRequest,
+], catchAsync(socialController.searchDirectory));
+
 // ==================== GROUPS ====================
 
 // Create group

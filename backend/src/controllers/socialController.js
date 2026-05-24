@@ -336,6 +336,21 @@ class SocialController {
     }
   }
 
+  async searchDirectory(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { q } = req.query;
+      const { limit = 20, offset = 0 } = req.query;
+      const results = await socialService.searchDirectory(q, userId, {
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+      });
+      res.json({ success: true, data: results });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async createGroup(req, res, next) {
     try {
       const userId = req.user.id;

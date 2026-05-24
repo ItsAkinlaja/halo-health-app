@@ -195,6 +195,13 @@ class SocialService {
     return response.data;
   }
 
+  async searchDirectory(query, limit = 20, offset = 0) {
+    const response = await api.get('/api/social/search', {
+      params: { q: query, limit, offset },
+    });
+    return response.data;
+  }
+
   // ==================== GROUPS ====================
   
   async createGroup(name, description, isPrivate = false, category = null) {

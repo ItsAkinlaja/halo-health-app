@@ -65,13 +65,13 @@ export const profileService = {
     return res.data ?? res;
   },
 
-  async uploadPhoto(profileId, imageUri) {
+  async uploadPhoto(userId, imageUri) {
     const formData = new FormData();
     const filename = imageUri.split('/').pop();
     const match = /\.(\w+)$/.exec(filename);
     const type = match ? `image/${match[1]}` : 'image/jpeg';
     formData.append('photo', { uri: imageUri, type, name: filename || 'profile.jpg' });
-    const res = await api.post(`/api/profiles/${profileId}/photo`, formData);
+    const res = await api.post(`/api/profiles/user/${userId}/photo`, formData);
     return res.data ?? res;
   },
 

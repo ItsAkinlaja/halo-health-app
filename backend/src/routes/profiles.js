@@ -1,10 +1,12 @@
 const express = require('express');
+const multer = require('multer');
 const { body, param, query, validationResult } = require('express-validator');
 const profileController = require('../controllers/profileController');
 const { authMiddleware } = require('../middleware/auth');
 const { catchAsync } = require('../middleware/errorHandler');
 
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 router.use(authMiddleware);
 
@@ -33,6 +35,11 @@ router.put('/user/:userId', [
   body('blood_type').optional().isIn(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']).withMessage('Invalid blood type'),
   validate,
 ], catchAsync(profileController.updateUserProfile));
+
+router.post('/user/:userId/photo', upload.single('photo'), [
+  param('userId').isUUID().withMessage('Invalid user ID format'),
+  validate,
+], catchAsync(profileController.uploadUserPhoto));
 
 // Family profiles list + create
 router.get('/', [

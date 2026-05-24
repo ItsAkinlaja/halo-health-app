@@ -8,6 +8,12 @@ import HomeDashboard from '../screens/main/HomeDashboard';
 import Scanner from '../screens/main/Scanner';
 import Explore from '../screens/main/Explore';
 import SocialFeed from '../screens/main/SocialFeed';
+import SocialSearch from '../screens/main/SocialSearch';
+import CreatePost from '../screens/main/CreatePost';
+import PostDetails from '../screens/main/PostDetails';
+import UserProfile from '../screens/main/UserProfile';
+import HaloStore from '../screens/main/HaloStore';
+import HouseholdHub from '../screens/main/HouseholdHub';
 import MealPlanner from '../screens/main/MealPlanner';
 import Profile from '../screens/main/Profile';
 import ProductDetails from '../screens/main/ProductDetails';
@@ -147,7 +153,13 @@ const MainNavigator = () => {
       <Stack.Screen name="Notifications" component={Notifications} />
       <Stack.Screen name="ScanHistory" component={ScanHistory} />
       <Stack.Screen name="Scanner" component={Scanner} />
+      <Stack.Screen name="CreatePost" component={CreatePost} />
+      <Stack.Screen name="SocialSearch" component={SocialSearch} />
+      <Stack.Screen name="PostDetails" component={PostDetails} />
+      <Stack.Screen name="UserProfile" component={UserProfile} />
       <Stack.Screen name="Meals" component={MealPlanner} />
+      <Stack.Screen name="HaloStore" component={HaloStore} />
+      <Stack.Screen name="HouseholdHub" component={HouseholdHub} />
       <Stack.Screen name="BookDoctor" component={PlaceholderScreen} />
       <Stack.Screen name="PersonalCare" component={PlaceholderScreen} />
       <Stack.Screen name="BabyKids" component={PlaceholderScreen} />

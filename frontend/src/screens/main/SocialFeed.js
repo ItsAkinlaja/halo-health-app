@@ -221,11 +221,11 @@ export default function SocialFeed({ navigation }) {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Community</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconBtn}>
+          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('SocialSearch')}>
             <Ionicons name="search-outline" size={22} color={COLORS.textPrimary} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn}>
-            <Ionicons name="chatbubbles-outline" size={22} color={COLORS.textPrimary} />
+          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('CreatePost')}>
+            <Ionicons name="create-outline" size={22} color={COLORS.textPrimary} />
           </TouchableOpacity>
         </View>
       </View>

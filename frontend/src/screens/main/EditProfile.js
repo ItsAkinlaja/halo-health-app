@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator,
+  TextInput, Alert, ActivityIndicator, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useAppContext } from '../../context/AppContext';
 import { profileService } from '../../services/profileService';
 import { supabase } from '../../services/supabase';
@@ -13,15 +14,62 @@ import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../styles/theme
 export default function EditProfile({ navigation }) {
   const { user, setUser } = useAppContext();
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
 
   useEffect(() => {
     if (user) {
       setName(user.user_metadata?.name ?? user.user_metadata?.full_name ?? '');
       setUsername(user.user_metadata?.username ?? user.user_metadata?.halo_health_id ?? '');
+      setAvatarUrl(user.user_metadata?.avatar_url ?? '');
     }
   }, [user]);
+
+  const handlePickPhoto = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission needed', 'Please allow photo library access to update your profile picture.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.9,
+    });
+
+    if (result.canceled || !result.assets?.length) return;
+
+    const imageUri = result.assets[0].uri;
+
+    try {
+      setUploadingPhoto(true);
+      const response = await profileService.uploadPhoto(user.id, imageUri);
+      const nextAvatar = response?.avatar_url || response?.data?.avatar_url;
+
+      if (nextAvatar) {
+        setAvatarUrl(nextAvatar);
+        const { data, error } = await supabase.auth.updateUser({
+          data: {
+            avatar_url: nextAvatar,
+          },
+        });
+
+        if (error) throw error;
+        if (data?.user) {
+          setUser(data.user);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to update profile photo:', error.message);
+      Alert.alert('Error', error.message || 'Failed to update photo');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -99,14 +147,19 @@ export default function EditProfile({ navigation }) {
         {/* Avatar */}
         <View style={styles.avatarSection}>
           <View style={styles.avatarWrap}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initials}</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.avatarEditBtn}
-              onPress={() => Alert.alert('Coming Soon', 'Photo upload will be available soon.')}
-            >
-              <Ionicons name="camera" size={16} color={COLORS.white} />
+            <TouchableOpacity style={styles.avatar} onPress={handlePickPhoto} disabled={uploadingPhoto}>
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarText}>{initials}</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.avatarEditBtn} onPress={handlePickPhoto} disabled={uploadingPhoto}>
+              {uploadingPhoto ? (
+                <ActivityIndicator size="small" color={COLORS.white} />
+              ) : (
+                <Ionicons name="camera" size={16} color={COLORS.white} />
+              )}
             </TouchableOpacity>
           </View>
           <Text style={styles.avatarHint}>Tap to change photo</Text>
@@ -211,6 +264,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...SHADOWS.md,
   },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 44 },
   avatarText: { fontSize: TYPOGRAPHY.xxl, fontWeight: '700', color: COLORS.white },
   avatarEditBtn: {
     position: 'absolute',

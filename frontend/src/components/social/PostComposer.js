@@ -1,25 +1,27 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../styles/theme';
 import { socialService } from '../../services/socialService';
 
 export default function PostComposer({ onPostCreated, onCancel }) {
   const [content, setContent] = useState('');
+  const [overlayText, setOverlayText] = useState('');
   const [images, setImages] = useState([]);
   const [isPublic, setIsPublic] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
   const handlePost = async () => {
-    if (!content.trim()) {
-      Alert.alert('Error', 'Please enter some content');
+    if (!content.trim() && !overlayText.trim() && images.length === 0) {
+      Alert.alert('Error', 'Please add text, a photo, or both');
       return;
     }
 
     setIsLoading(true);
     try {
       const postData = {
-        content: content.trim(),
+        content: [content.trim(), overlayText.trim()].filter(Boolean).join('\n\n'),
         image_urls: images,
         is_public: isPublic,
         tags: extractHashtags(content),
@@ -30,6 +32,7 @@ export default function PostComposer({ onPostCreated, onCancel }) {
       
       // Reset form
       setContent('');
+            setOverlayText('');
       setImages([]);
     } catch (error) {
       console.error('Failed to create post:', error);
@@ -45,9 +48,23 @@ export default function PostComposer({ onPostCreated, onCancel }) {
     return matches ? matches.map(tag => tag.substring(1)) : [];
   };
 
-  const handleAddImage = () => {
-    // TODO: Implement image picker
-    Alert.alert('Coming Soon', 'Image upload will be available soon');
+  const handleAddImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission needed', 'Please allow photo library access to add an image.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 0.85,
+    });
+
+    if (result.canceled) return;
+
+    const nextImages = result.assets.map((asset) => asset.uri);
+    setImages((prev) => [...prev, ...nextImages].slice(0, 4));
   };
 
   const removeImage = (index) => {
@@ -88,12 +105,27 @@ export default function PostComposer({ onPostCreated, onCancel }) {
           autoFocus
         />
 
+        <TextInput
+          style={styles.overlayInput}
+          placeholder="Write on your image or add a short story note"
+          placeholderTextColor={COLORS.textTertiary}
+          multiline
+          value={overlayText}
+          onChangeText={setOverlayText}
+          maxLength={240}
+        />
+
         {/* Image Preview */}
         {images.length > 0 && (
           <View style={styles.imagesContainer}>
             {images.map((uri, index) => (
               <View key={index} style={styles.imageWrapper}>
                 <Image source={{ uri }} style={styles.image} />
+                {overlayText.trim() ? (
+                  <View style={styles.imageOverlay}>
+                    <Text style={styles.imageOverlayText} numberOfLines={3}>{overlayText.trim()}</Text>
+                  </View>
+                ) : null}
                 <TouchableOpacity 
                   style={styles.removeImageButton}
                   onPress={() => removeImage(index)}
@@ -178,6 +210,18 @@ const styles = StyleSheet.create({
     minHeight: 150,
     textAlignVertical: 'top',
   },
+  overlayInput: {
+    marginTop: SPACING.md,
+    padding: SPACING.md,
+    minHeight: 90,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    fontSize: TYPOGRAPHY.base,
+    color: COLORS.textPrimary,
+    textAlignVertical: 'top',
+  },
   imagesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -195,6 +239,22 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: COLORS.border,
+  },
+  imageOverlay: {
+    position: 'absolute',
+    left: 8,
+    right: 8,
+    bottom: 8,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.sm,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  imageOverlayText: {
+    fontSize: TYPOGRAPHY.xs,
+    color: COLORS.white,
+    fontWeight: '600',
+    lineHeight: 16,
   },
   removeImageButton: {
     position: 'absolute',

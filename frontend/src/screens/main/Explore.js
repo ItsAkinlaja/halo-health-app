@@ -7,8 +7,9 @@ import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../styles/theme
 
 const featuredActions = [
   { title: 'Shop & Scan', subtitle: 'Healthy shopping on-the-go', icon: 'scan-outline', screen: 'Scanner', accent: COLORS.primary },
+  { title: 'Halo Official Store', subtitle: 'Curated products for every household', icon: 'bag-outline', screen: 'HaloStore', accent: COLORS.accent },
   { title: 'Book a Doctor', subtitle: 'Verified doctors, family + pet consults', icon: 'medkit-outline', screen: 'BookDoctor', accent: COLORS.info },
-  { title: 'Household & Profiles', subtitle: 'People, pets, allergies, conditions', icon: 'people-outline', screen: 'FamilyProfiles', accent: COLORS.secondary },
+  { title: 'Household & Profiles', subtitle: 'People, pets, allergies, conditions', icon: 'people-outline', screen: 'HouseholdHub', accent: COLORS.secondary },
 ];
 
 const planActions = [
@@ -19,12 +20,13 @@ const planActions = [
 const discoverActions = [
   { title: 'Restaurants & Menus', icon: 'restaurant-outline', screen: 'RestaurantFinder' },
   { title: 'Top Rated Products', icon: 'star-outline', screen: 'GroceryExplorer' },
+  { title: 'Halo Store', icon: 'bag-handle-outline', screen: 'HaloStore' },
   { title: 'News & Trends', icon: 'newspaper-outline', screen: 'NewsFeed' },
   { title: 'Water & Filters', icon: 'water-outline', screen: 'WaterAnalysis' },
   { title: 'Food Ingredients & Snacks', icon: 'grid-outline', screen: 'PantryTracker' },
   { title: 'Supplements', icon: 'fitness-outline', screen: 'SupplementTracker' },
   { title: 'Personal Care', icon: 'sparkles-outline', screen: 'PersonalCare' },
-  { title: 'Household', icon: 'home-outline', screen: 'HomeEnvironmentAudit' },
+  { title: 'Household', icon: 'home-outline', screen: 'HouseholdHub' },
   { title: 'Baby & Kids', icon: 'happy-outline', screen: 'BabyKids' },
   { title: 'Pet Food', icon: 'paw-outline', screen: 'PetFood' },
 ];

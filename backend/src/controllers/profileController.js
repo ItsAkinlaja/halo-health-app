@@ -1,3 +1,5 @@
+const multer = require('multer');
+const sharp = require('sharp');
 const { supabase } = require('../utils/database');
 const { NotFoundError, ValidationError, ForbiddenError } = require('../middleware/errorHandler');
 const logger = console;
@@ -48,7 +50,7 @@ class ProfileController {
       const { userId } = req.params;
       if (userId !== req.user.id) throw new ForbiddenError();
 
-      const { name, phone, date_of_birth, gender, height, weight, blood_type } = req.body;
+      const { name, phone, date_of_birth, gender, height, weight, blood_type, avatar_url } = req.body;
 
       // Upsert primary profile
       const { data: existing } = await supabase
@@ -89,9 +91,47 @@ class ProfileController {
       }
 
       // Update users table for phone / dob / blood_type if columns exist
-      await supabase.from('users').update({ updated_at: new Date().toISOString() }).eq('id', userId);
+      const userUpdates = { updated_at: new Date().toISOString() };
+
+      if (avatar_url) {
+        userUpdates.avatar_url = avatar_url;
+      }
+
+      await supabase.from('users').update(userUpdates).eq('id', userId);
 
       res.json({ status: 'success', data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // POST /api/profiles/user/:userId/photo
+  async uploadUserPhoto(req, res, next) {
+    try {
+      const { userId } = req.params;
+      if (userId !== req.user.id) throw new ForbiddenError();
+
+      if (!req.file) {
+        throw new ValidationError('Photo is required');
+      }
+
+      const imageBuffer = await sharp(req.file.buffer)
+        .resize(512, 512, { fit: 'cover' })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+
+      const avatarUrl = `data:image/jpeg;base64,${imageBuffer.toString('base64')}`;
+
+      const { error } = await supabase
+        .from('users')
+        .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
+        .eq('id', userId);
+
+      if (error) {
+        throw new ValidationError(error.message);
+      }
+
+      res.json({ status: 'success', data: { avatar_url: avatarUrl } });
     } catch (error) {
       next(error);
     }

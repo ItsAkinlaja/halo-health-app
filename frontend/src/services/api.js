@@ -39,6 +39,23 @@ class ApiClient {
       headers,
     };
 
+    let requestUrl = `${this.baseURL}${endpoint}`;
+
+    if (options.params && typeof options.params === 'object') {
+      const searchParams = new URLSearchParams();
+
+      Object.entries(options.params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          searchParams.append(key, String(value));
+        }
+      });
+
+      const queryString = searchParams.toString();
+      if (queryString) {
+        requestUrl += `${endpoint.includes('?') ? '&' : '?'}${queryString}`;
+      }
+    }
+
     // Remove Content-Type for FormData
     if (options.body instanceof FormData) {
       delete config.headers['Content-Type'];
@@ -49,7 +66,7 @@ class ApiClient {
     config.signal = controller.signal;
 
     try {
-      const response = await fetch(`${this.baseURL}${endpoint}`, config);
+      const response = await fetch(requestUrl, config);
       clearTimeout(timeoutId);
       
       let responseData;

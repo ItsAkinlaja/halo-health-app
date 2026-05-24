@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,8 +9,6 @@ import { Button } from '../../components/common/Button';
 import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../styles/theme';
-
-const { width: W } = Dimensions.get('window');
 
 export default function Profile({ navigation }) {
   const { user, activeProfile } = useAppContext();
@@ -29,6 +27,7 @@ export default function Profile({ navigation }) {
       ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
       : user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'User');
   const displayEmail = user?.email || '';
+  const avatarUrl = user?.user_metadata?.avatar_url;
   const memberSince = user?.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently';
 
   const stats = [
@@ -74,10 +73,14 @@ export default function Profile({ navigation }) {
         <Card style={styles.headerCard} variant="elevated">
           <View style={styles.profileHeader}>
             <View style={styles.avatarContainer}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
-              </View>
-              <TouchableOpacity style={styles.editAvatarBtn}>
+              <TouchableOpacity style={styles.avatar} onPress={() => navigation.navigate('EditProfile')}>
+                {avatarUrl ? (
+                  <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+                ) : (
+                  <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.editAvatarBtn} onPress={() => navigation.navigate('EditProfile')}>
                 <Ionicons name="camera-outline" size={16} color={COLORS.white} />
               </TouchableOpacity>
             </View>
@@ -170,6 +173,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.white,
     ...SHADOWS.sm,
   },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 36 },
   avatarText: { fontSize: TYPOGRAPHY.xxl, fontWeight: '700', color: COLORS.white },
   editAvatarBtn: {
     position: 'absolute',

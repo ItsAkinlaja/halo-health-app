@@ -141,6 +141,68 @@ class SocialService {
       return []; // Return empty array instead of throwing to prevent app crash
     }
   }
+
+  async searchUsers(query, options = {}) {
+    const { limit = 20, offset = 0 } = options;
+    const searchTerm = (query || '').trim();
+
+    if (!searchTerm) return [];
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, username, avatar_url, halo_health_id, bio')
+      .or(`username.ilike.%${searchTerm}%,halo_health_id.ilike.%${searchTerm}%`)
+      .order('username', { ascending: true })
+      .range(offset, offset + limit - 1);
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  async searchPosts(query, userId, options = {}) {
+    const { limit = 20, offset = 0 } = options;
+    const searchTerm = (query || '').trim();
+
+    if (!searchTerm) return [];
+
+    const { data, error } = await supabase
+      .from('social_posts')
+      .select(`
+        *,
+        user:users(id, username, avatar_url, halo_health_id),
+        is_liked:post_likes(user_id)
+      `)
+      .ilike('content', `%${searchTerm}%`)
+      .eq('is_public', true)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) throw error;
+
+    return (data || []).map((post) => ({
+      ...post,
+      is_liked: post.is_liked?.some((like) => like.user_id === userId) || false,
+    }));
+  }
+
+  async searchDirectory(query, userId, options = {}) {
+    const { limit = 20, offset = 0 } = options;
+    const searchTerm = (query || '').trim();
+
+    if (!searchTerm) {
+      return { users: [], posts: [], hashtags: [], groups: [] };
+    }
+
+    const [users, posts, hashtags, groups] = await Promise.all([
+      this.searchUsers(searchTerm, { limit, offset }),
+      this.searchPosts(searchTerm, userId, { limit, offset }),
+      this.searchHashtags(searchTerm, Math.min(limit, 10)),
+      this.getGroups({ search: searchTerm, limit: Math.min(limit, 10), offset }),
+    ]);
+
+    return { users, posts, hashtags, groups };
+  }
+
   async getUserPosts(targetUserId, currentUserId, options = {}) {
     const { limit = 20, offset = 0 } = options;
     
