@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   StatusBar, ActivityIndicator, RefreshControl, Alert,
-  FlatList, Image, Share,
+  FlatList, Image, Share, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +14,10 @@ import { socialService } from '../../services/socialService';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../styles/theme';
 
 const TABS = ['Discover', 'Following'];
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const CARD_PADDING = 16; // SPACING.base on each side + card padding
+const IMAGE_WIDTH = SCREEN_WIDTH - CARD_PADDING * 4; // account for card margins + padding
+const IMAGE_WIDTH_GRID = (IMAGE_WIDTH - 4) / 2; // 4px gap between grid images
 
 const timeAgo = (ts) => {
   if (!ts) return 'now';
@@ -53,9 +57,11 @@ const getPostImages = (post) => {
 
   if (!Array.isArray(images)) return [];
 
-  return images
+  const result = images
     .map((image) => (typeof image === 'string' ? image : image?.url))
     .filter((url) => typeof url === 'string' && /^https?:\/\//i.test(url));
+
+  return result;
 };
 
 const getAuthor = (post) => {
@@ -89,6 +95,34 @@ const Avatar = React.memo(({ initials, color, avatarUrl, size = 40 }) => {
     ]}>
       <Text style={[styles.avatarText, { fontSize: size * 0.35 }]}>{initials}</Text>
     </View>
+  );
+});
+
+// Image with error fallback
+const PostImage = React.memo(({ uri, single }) => {
+  const [error, setError] = useState(false);
+  const imgStyle = single
+    ? { width: IMAGE_WIDTH, height: Math.round(IMAGE_WIDTH / 1.25) }
+    : { width: IMAGE_WIDTH_GRID, height: IMAGE_WIDTH_GRID };
+
+  if (error) {
+    return (
+      <View style={[styles.postImage, imgStyle, styles.postImageError]}>
+        <Ionicons name="image-outline" size={32} color={COLORS.textTertiary} />
+        <Text style={styles.postImageErrorText}>Image unavailable</Text>
+      </View>
+    );
+  }
+  return (
+    <Image
+      source={{ uri }}
+      resizeMode="cover"
+      onError={(e) => {
+        console.warn('[PostImage] Failed to load:', uri, e.nativeEvent?.error);
+        setError(true);
+      }}
+      style={[styles.postImage, imgStyle]}
+    />
   );
 });
 
@@ -126,15 +160,10 @@ const PostCard = React.memo(({ post, activeTab, currentUserId, onLike, onSave, o
       {postImages.length > 0 ? (
         <View style={styles.postImages}>
           {postImages.map((uri, index) => (
-            <Image
+            <PostImage
               key={`${index}`}
-              source={{ uri }}
-              resizeMode="cover"
-              onError={() => console.warn('Failed to load post image:', uri)}
-              style={[
-                styles.postImage,
-                postImages.length === 1 ? styles.postImageSingle : styles.postImageGrid,
-              ]}
+              uri={uri}
+              single={postImages.length === 1}
             />
           ))}
         </View>
@@ -561,6 +590,15 @@ const styles = StyleSheet.create({
   postImage: {
     backgroundColor: COLORS.border,
     borderRadius: RADIUS.md,
+  },
+  postImageError: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  postImageErrorText: {
+    fontSize: TYPOGRAPHY.xs,
+    color: COLORS.textTertiary,
   },
   postImageSingle: {
     width: '100%',
