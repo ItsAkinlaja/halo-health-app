@@ -158,7 +158,8 @@ class ApiClient {
 
   async get(endpoint, options = {}) {
     // Check cache
-    const cacheKey = `GET:${endpoint}`;
+    const paramsKey = options.params ? JSON.stringify(options.params) : '';
+    const cacheKey = `GET:${endpoint}:${paramsKey}`;
     const cached = this.cache.get(cacheKey);
     
     if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
@@ -175,11 +176,13 @@ class ApiClient {
 
   async post(endpoint, body, options = {}) {
     const isForm = this._isFormData(body);
-    return this.request(endpoint, {
+    const data = await this.request(endpoint, {
       ...options,
       method: 'POST',
       body: isForm ? body : JSON.stringify(body),
     });
+    this.invalidateCache(endpoint.split('/').slice(0, 4).join('/'));
+    return data;
   }
 
   async put(endpoint, body, options = {}) {

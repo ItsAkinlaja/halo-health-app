@@ -1,18 +1,28 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   StatusBar, ActivityIndicator, RefreshControl, Alert,
   FlatList,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { HaloCard } from '../../components/common/HaloCard';
 import { ScoreBadge } from '../../components/common/HaloBadge';
+import FollowButton from '../../components/social/FollowButton';
 import { useAppContext } from '../../context/AppContext';
 import { socialService } from '../../services/socialService';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../styles/theme';
 
 const TABS = ['Discover', 'Following'];
+
+const getPostImages = (post) => {
+  if (!Array.isArray(post.image_urls)) return [];
+
+  return post.image_urls
+    .map((image) => (typeof image === 'string' ? image : image?.url))
+    .filter(Boolean);
+};
 
 // Memoized Avatar component for better performance in lists
 const Avatar = React.memo(({ initials, color, size = 40 }) => (
@@ -25,26 +35,53 @@ const Avatar = React.memo(({ initials, color, size = 40 }) => (
 ));
 
 // Memoized PostCard for optimized list rendering
-const PostCard = React.memo(({ post, onLike, onSave, onComment }) => {
+const PostCard = React.memo(({ post, activeTab, currentUserId, onLike, onSave, onComment, onFollowChange }) => {
   const scoreColor = post.score >= 60 ? COLORS.scoreExcellent : COLORS.scoreAvoid;
-  const author = post.author || {};
-  const initials = author.name ? author.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'U';
+  const author = post.author || post.user || {};
+  const authorName = author.name || author.username || 'User';
+  const authorId = author.id || post.user_id;
+  const initials = authorName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
   const avatarColor = author.avatar_color || COLORS.primary;
+  const postImages = getPostImages(post);
+  const canFollowAuthor = activeTab === 'Discover' && authorId && authorId !== currentUserId;
 
   return (
     <HaloCard style={styles.postCard}>
       <View style={styles.postHeader}>
         <Avatar initials={initials} color={avatarColor} size={40} />
         <View style={styles.postAuthorInfo}>
-          <Text style={styles.postAuthor}>{author.name || 'User'}</Text>
-          <Text style={styles.postHandle}>@{author.username || 'user'} · {post.time_ago || 'now'}</Text>
+          <Text style={styles.postAuthor}>{authorName}</Text>
+          <Text style={styles.postHandle}>@{author.username || 'user'} - {post.time_ago || 'now'}</Text>
         </View>
+        {canFollowAuthor ? (
+          <FollowButton
+            userId={authorId}
+            initialFollowing={!!post.is_following}
+            onFollowChange={onFollowChange}
+            style={styles.followButton}
+          />
+        ) : null}
         <TouchableOpacity style={styles.postMoreBtn}>
           <Ionicons name="ellipsis-horizontal" size={18} color={COLORS.textTertiary} />
         </TouchableOpacity>
       </View>
 
       <Text style={styles.postContent}>{post.content || ''}</Text>
+
+      {postImages.length > 0 ? (
+        <View style={styles.postImages}>
+          {postImages.map((uri, index) => (
+            <Image
+              key={`${uri}-${index}`}
+              source={{ uri }}
+              style={[
+                styles.postImage,
+                postImages.length === 1 ? styles.postImageSingle : styles.postImageGrid,
+              ]}
+            />
+          ))}
+        </View>
+      ) : null}
 
       {post.post_type === 'scan' && post.product_score !== undefined && post.product_score !== null ? (
         <View style={[styles.scanResult, { borderLeftColor: scoreColor }]}>
@@ -207,6 +244,14 @@ export default function SocialFeed({ navigation }) {
     navigation.navigate('PostDetails', { postId });
   }, [navigation]);
 
+  const handleFollowChange = useCallback((userId, following) => {
+    setPosts(prev => prev.map(post => (
+      post.user_id === userId || post.user?.id === userId || post.author?.id === userId
+        ? { ...post, is_following: following }
+        : post
+    )));
+  }, []);
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadPosts(true);
@@ -215,6 +260,16 @@ export default function SocialFeed({ navigation }) {
   const onEndReached = useCallback(() => {
     loadPosts(false);
   }, [loadPosts]);
+
+  const handleTabPress = useCallback((tab) => {
+    if (tab === activeTab) return;
+
+    setActiveTab(tab);
+    setPosts([]);
+    setOffset(0);
+    setHasMore(true);
+    setLoading(true);
+  }, [activeTab]);
 
   const renderHeader = () => (
     <>
@@ -235,7 +290,7 @@ export default function SocialFeed({ navigation }) {
           <TouchableOpacity
             key={tab}
             style={[styles.tab, activeTab === tab ? styles.tabActive : null]}
-            onPress={() => setActiveTab(tab)}
+            onPress={() => handleTabPress(tab)}
           >
             <Text style={[styles.tabText, activeTab === tab ? styles.tabTextActive : null]}>{tab}</Text>
           </TouchableOpacity>
@@ -284,9 +339,12 @@ export default function SocialFeed({ navigation }) {
           renderItem={({ item }) => (
             <PostCard 
               post={item} 
+              activeTab={activeTab}
+              currentUserId={user?.id}
               onLike={handleLike} 
               onSave={handleSave}
               onComment={handleComment}
+              onFollowChange={handleFollowChange}
             />
           )}
           ListHeaderComponent={renderHeader()}
@@ -387,9 +445,33 @@ const styles = StyleSheet.create({
   postAuthor: { fontSize: TYPOGRAPHY.base, fontWeight: '700', color: COLORS.textPrimary },
   postHandle: { fontSize: TYPOGRAPHY.xs, color: COLORS.textTertiary },
   postMoreBtn: { padding: SPACING.xs },
+  followButton: {
+    minWidth: 86,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.md,
+  },
   postContent: {
     fontSize: TYPOGRAPHY.base, color: COLORS.textPrimary,
     lineHeight: 24, marginBottom: SPACING.md,
+  },
+  postImages: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.xs,
+    marginBottom: SPACING.md,
+  },
+  postImage: {
+    backgroundColor: COLORS.border,
+    borderRadius: RADIUS.md,
+  },
+  postImageSingle: {
+    width: '100%',
+    aspectRatio: 1.25,
+  },
+  postImageGrid: {
+    width: '48%',
+    aspectRatio: 1,
   },
 
   scanResult: {

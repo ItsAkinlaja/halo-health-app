@@ -45,14 +45,15 @@ export default function PostComposer({ onPostCreated, onCancel, initialImages, o
 
     setIsLoading(true);
     try {
-      let imageUrls = images.map(img => ({ url: img.uri, caption: img.caption || '' }));
+      let imageUrls = images.map(img => img.uri);
 
       // If there are local URIs, upload them first
-      const needsUpload = imageUrls.some(i => !i.url.startsWith('http'));
+      const needsUpload = imageUrls.some(url => !url.startsWith('http'));
       if (needsUpload) {
         try {
+          const localImages = images.filter((img) => !img.uri.startsWith('http'));
           const form = new FormData();
-          images.forEach((img, idx) => {
+          localImages.forEach((img, idx) => {
             const uri = img.uri;
             const filename = uri.split('/').pop() || `photo-${Date.now()}-${idx}.jpg`;
             form.append('images', { uri, name: filename, type: 'image/jpeg' });
@@ -60,10 +61,16 @@ export default function PostComposer({ onPostCreated, onCancel, initialImages, o
 
           const uploadRes = await api.post('/api/social/uploads/images', form);
           const returned = uploadRes?.data?.urls || uploadRes?.urls || [];
-          if (!returned.length && images.length > 0) {
+          if (returned.length !== localImages.length) {
             throw new Error('Image upload failed. Please try again.');
           }
-          imageUrls = images.map((img, idx) => ({ url: returned[idx] || img.uri }));
+          let uploadedIndex = 0;
+          imageUrls = images.map((img) => {
+            if (img.uri.startsWith('http')) return img.uri;
+            const uploadedUrl = returned[uploadedIndex];
+            uploadedIndex += 1;
+            return uploadedUrl;
+          });
         } catch (uploadErr) {
           console.warn('Image upload failed:', uploadErr);
           throw uploadErr;

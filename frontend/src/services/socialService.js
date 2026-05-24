@@ -104,11 +104,13 @@ class SocialService {
   
   async followUser(userId) {
     const response = await api.post(`/api/social/users/${userId}/follow`);
+    api.invalidateCache('/api/social/posts');
     return response.data;
   }
 
   async unfollowUser(userId) {
     const response = await api.delete(`/api/social/users/${userId}/follow`);
+    api.invalidateCache('/api/social/posts');
     return response.data;
   }
 

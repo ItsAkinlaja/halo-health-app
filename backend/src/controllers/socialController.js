@@ -1,6 +1,60 @@
 const socialService = require('../services/socialService');
 const { ValidationError, NotFoundError } = require('../middleware/errorHandler');
 const { supabase } = require('../utils/database');
+const sharp = require('sharp');
+const fs = require('fs/promises');
+const path = require('path');
+
+const POST_IMAGE_BUCKET = 'post-images';
+const LOCAL_POST_IMAGE_DIR = path.join(__dirname, '..', 'uploads', 'post-images');
+
+const isMissingBucketError = (error) => {
+  const message = `${error?.message || ''} ${error?.error || ''}`.toLowerCase();
+  return error?.statusCode === '404' || message.includes('bucket not found');
+};
+
+const ensurePostImageBucket = async () => {
+  const { error } = await supabase.storage.createBucket(POST_IMAGE_BUCKET, {
+    public: true,
+    fileSizeLimit: 10 * 1024 * 1024,
+    allowedMimeTypes: ['image/jpeg'],
+  });
+
+  const alreadyExists = `${error?.message || ''}`.toLowerCase().includes('already exists');
+
+  if (error && error.statusCode !== '409' && !alreadyExists) {
+    throw error;
+  }
+};
+
+const uploadPostImage = async (path, buffer) => {
+  let result = await supabase.storage
+    .from(POST_IMAGE_BUCKET)
+    .upload(path, buffer, { contentType: 'image/jpeg', upsert: true });
+
+  if (result.error && isMissingBucketError(result.error)) {
+    await ensurePostImageBucket();
+    result = await supabase.storage
+      .from(POST_IMAGE_BUCKET)
+      .upload(path, buffer, { contentType: 'image/jpeg', upsert: true });
+  }
+
+  return result;
+};
+
+const getPublicBaseUrl = (req) => {
+  const configuredUrl = process.env.PUBLIC_API_URL || process.env.API_URL;
+  if (configuredUrl) return configuredUrl.replace(/\/$/, '');
+  return `${req.protocol}://${req.get('host')}`;
+};
+
+const savePostImageLocally = async (req, userId, filename, buffer) => {
+  const userDir = path.join(LOCAL_POST_IMAGE_DIR, userId);
+  await fs.mkdir(userDir, { recursive: true });
+
+  await fs.writeFile(path.join(userDir, filename), buffer);
+  return `${getPublicBaseUrl(req)}/uploads/post-images/${userId}/${filename}`;
+};
 
 class SocialController {
   async getFeed(req, res, next) {
@@ -34,34 +88,53 @@ class SocialController {
       }
 
       const urls = [];
+      const uploadErrors = [];
 
       for (let i = 0; i < req.files.length; i++) {
         const file = req.files[i];
-        const buffer = await require('sharp')(file.buffer)
+        const buffer = await sharp(file.buffer)
           .resize({ width: 2048, withoutEnlargement: true })
           .jpeg({ quality: 80 })
           .toBuffer();
 
         const timestamp = Date.now();
-        const path = `post-images/${userId}/${timestamp}-${i}.jpg`;
+        const filename = `${timestamp}-${i}.jpg`;
+        const path = `${userId}/${filename}`;
 
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('post-images')
-          .upload(path, buffer, { contentType: 'image/jpeg', upsert: true });
+        const { error: uploadError } = await uploadPostImage(path, buffer);
 
         if (uploadError) {
           console.error('[SocialController] Supabase upload error:', uploadError);
+          uploadErrors.push(uploadError.message || uploadError.error || 'Supabase storage upload failed');
+
+          try {
+            const localUrl = await savePostImageLocally(req, userId, filename, buffer);
+            urls.push(localUrl);
+          } catch (localError) {
+            console.error('[SocialController] Local image fallback failed:', localError);
+            uploadErrors.push(localError.message || 'Local image fallback failed');
+          }
+
           continue;
         }
 
-        const { data: publicData } = supabase.storage.from('post-images').getPublicUrl(path);
+        const { data: publicData } = supabase.storage.from(POST_IMAGE_BUCKET).getPublicUrl(path);
         const publicUrl = publicData?.publicUrl || null;
 
-        if (publicUrl) urls.push(publicUrl);
+        if (publicUrl) {
+          urls.push(publicUrl);
+        } else {
+          const localUrl = await savePostImageLocally(req, userId, filename, buffer);
+          urls.push(localUrl);
+        }
       }
 
       if (!urls.length) {
-        return res.status(500).json({ success: false, message: 'Failed to upload images' });
+        return res.status(500).json({
+          success: false,
+          message: uploadErrors[0] || 'Failed to upload images',
+          errors: uploadErrors,
+        });
       }
 
       res.json({ success: true, data: { urls } });

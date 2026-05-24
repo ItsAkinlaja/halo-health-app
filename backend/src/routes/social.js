@@ -28,7 +28,7 @@ const validateRequest = (req, res, next) => {
 
 // Create post
 router.post('/posts', [
-  body('content').notEmpty().withMessage('Content is required'),
+  body('content').optional().isString(),
   body('image_urls').optional().isArray(),
   body('tags').optional().isArray(),
   body('is_public').optional().isBoolean(),

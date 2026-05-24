@@ -5,12 +5,18 @@ class SocialService {
   
   async createPost(userId, postData) {
     const { content, image_urls, tags, is_public = true } = postData;
+    const hasContent = typeof content === 'string' && content.trim().length > 0;
+    const hasImages = Array.isArray(image_urls) && image_urls.length > 0;
+
+    if (!hasContent && !hasImages) {
+      throw new Error('Post content or image is required');
+    }
     
     const { data, error } = await supabase
       .from('social_posts')
       .insert([{
         user_id: userId,
-        content,
+        content: hasContent ? content.trim() : '',
         image_urls: image_urls || [],
         tags: tags || [],
         is_public,
@@ -89,6 +95,15 @@ class SocialService {
     const { filter = 'all', limit = 20, offset = 0 } = options;
     
     try {
+      const { data: follows, error: followsError } = await supabase
+        .from('user_follows')
+        .select('following_id')
+        .eq('follower_id', userId);
+
+      if (followsError) throw followsError;
+
+      const followingIds = follows?.map(f => f.following_id) || [];
+
       let query = supabase
         .from('social_posts')
         .select(`
@@ -101,12 +116,6 @@ class SocialService {
         .range(offset, offset + limit - 1);
       
       if (filter === 'following') {
-        const { data: follows } = await supabase
-          .from('user_follows')
-          .select('following_id')
-          .eq('follower_id', userId);
-        
-        const followingIds = follows?.map(f => f.following_id) || [];
         if (followingIds.length === 0) return [];
         
         query = query.in('user_id', followingIds);
@@ -117,21 +126,32 @@ class SocialService {
       if (error) {
         console.error('[SocialService] Supabase error in getFeed:', error);
         // Fallback to simpler query if join fails
-        const { data: simpleData, error: simpleError } = await supabase
+        let simpleQuery = supabase
           .from('social_posts')
           .select('*')
           .eq('is_public', true)
           .order('created_at', { ascending: false })
           .range(offset, offset + limit - 1);
+
+        if (filter === 'following') {
+          if (followingIds.length === 0) return [];
+          simpleQuery = simpleQuery.in('user_id', followingIds);
+        }
+
+        const { data: simpleData, error: simpleError } = await simpleQuery;
           
         if (simpleError) throw simpleError;
-        return simpleData || [];
+        return (simpleData || []).map(post => ({
+          ...post,
+          is_following: followingIds.includes(post.user_id),
+        }));
       }
       
       // Process is_liked for each post
       const processedPosts = (data || []).map(post => ({
         ...post,
         is_liked: post.is_liked?.some(l => l.user_id === userId) || false,
+        is_following: followingIds.includes(post.user_id),
         likes_count: post.likes_count || 0,
       }));
       
