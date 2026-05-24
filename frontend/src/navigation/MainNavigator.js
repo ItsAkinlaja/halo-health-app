@@ -40,6 +40,7 @@ import Language from '../screens/settings/Language';
 import NotificationSettings from '../screens/settings/NotificationSettings';
 import Subscription from '../screens/settings/Subscription';
 import Privacy from '../screens/settings/Privacy';
+import PrivacyPolicy from '../screens/settings/PrivacyPolicy';
 import HelpCenter from '../screens/settings/HelpCenter';
 import ContactSupport from '../screens/settings/ContactSupport';
 import Terms from '../screens/settings/Terms';
@@ -189,6 +190,7 @@ const MainNavigator = () => {
       <Stack.Screen name="Privacy" component={Privacy} />
       <Stack.Screen name="HelpCenter" component={HelpCenter} />
       <Stack.Screen name="ContactSupport" component={ContactSupport} />
+      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicy} />
       <Stack.Screen name="Terms" component={Terms} />
       <Stack.Screen name="EditProfile" component={EditProfile} />
       <Stack.Screen name="AICoach" component={AICoach} />

@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIn
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../components/common/Card';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { useAuth } from '../../context/AuthContext';
 import { userService } from '../../services/userService';
 import { COLORS, TYPOGRAPHY, SPACING } from '../../styles/theme';
@@ -14,14 +16,23 @@ export default function Privacy({ navigation }) {
   const handleDownloadData = async () => {
     try {
       setLoading(true);
-      await userService.requestDataExport();
-      Alert.alert(
-        'Export Requested',
-        'Your data export has been requested. You will receive an email with a download link within 24 hours.',
-        [{ text: 'OK' }]
-      );
+      const res = await userService.exportUserData();
+      const exportData = res.data || res;
+
+      const filename = `halohealth-data-${Date.now()}.json`;
+      const path = FileSystem.documentDirectory + filename;
+      await FileSystem.writeAsStringAsync(path, JSON.stringify(exportData, null, 2), {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      if (!(await Sharing.isAvailableAsync())) {
+        Alert.alert('Export Ready', 'Data export saved to app storage. Use device file manager to access the file.');
+      } else {
+        await Sharing.shareAsync(path, { mimeType: 'application/json' });
+      }
     } catch (error) {
-      Alert.alert('Error', 'Failed to request data export. Please try again.');
+      console.error('Export failed:', error);
+      Alert.alert('Error', 'Failed to export data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -104,7 +115,7 @@ export default function Privacy({ navigation }) {
             <Ionicons name="chevron-forward" size={20} color={COLORS.textTertiary} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.row, styles.rowBorder]} onPress={() => {}}>
+          <TouchableOpacity style={[styles.row, styles.rowBorder]} onPress={() => navigation.navigate('PrivacyPolicy')}>
             <View style={styles.rowLeft}>
               <Ionicons name="shield-checkmark-outline" size={20} color={COLORS.primary} />
               <Text style={styles.rowLabel}>Privacy Policy</Text>

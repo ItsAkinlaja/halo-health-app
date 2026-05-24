@@ -9,6 +9,9 @@ import VerifyEmail from '../screens/auth/VerifyEmail';
 import ResetPasswordOtp from '../screens/auth/ResetPasswordOtp';
 import { OnboardingProvider } from '../context/OnboardingContext';
 import storage, { STORAGE_KEYS } from '../utils/storage';
+import Terms from '../screens/settings/Terms';
+import Privacy from '../screens/settings/Privacy';
+import PrivacyPolicy from '../screens/settings/PrivacyPolicy';
 
 const Stack = createNativeStackNavigator();
 
@@ -20,6 +23,9 @@ function AuthStack({ initialRoute }) {
       <Stack.Screen name="Login" component={Login} />
       <Stack.Screen name="Register" component={Register} />
       <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
+      <Stack.Screen name="Terms" component={Terms} />
+      <Stack.Screen name="Privacy" component={Privacy} />
+      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicy} />
       <Stack.Screen name="VerifyEmail" component={VerifyEmail} />
       <Stack.Screen name="ResetPasswordOtp" component={ResetPasswordOtp} />
     </Stack.Navigator>
