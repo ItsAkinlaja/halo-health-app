@@ -1,12 +1,26 @@
 const { supabase } = require('../utils/database');
 
+const normalizeImageUrls = (imageUrls) => {
+  if (!imageUrls) return [];
+
+  const list = Array.isArray(imageUrls) ? imageUrls : [imageUrls];
+
+  return list
+    .map((image) => {
+      if (typeof image === 'string') return image;
+      return image?.url || image?.uri || null;
+    })
+    .filter((url) => typeof url === 'string' && /^https?:\/\//i.test(url));
+};
+
 class SocialService {
   // ==================== POSTS ====================
   
   async createPost(userId, postData) {
     const { content, image_urls, tags, is_public = true } = postData;
+    const normalizedImageUrls = normalizeImageUrls(image_urls);
     const hasContent = typeof content === 'string' && content.trim().length > 0;
-    const hasImages = Array.isArray(image_urls) && image_urls.length > 0;
+    const hasImages = normalizedImageUrls.length > 0;
 
     if (!hasContent && !hasImages) {
       throw new Error('Post content or image is required');
@@ -17,7 +31,7 @@ class SocialService {
       .insert([{
         user_id: userId,
         content: hasContent ? content.trim() : '',
-        image_urls: image_urls || [],
+        image_urls: normalizedImageUrls,
         tags: tags || [],
         is_public,
       }])

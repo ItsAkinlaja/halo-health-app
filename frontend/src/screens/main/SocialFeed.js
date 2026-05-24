@@ -17,11 +17,33 @@ import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../styles/theme
 const TABS = ['Discover', 'Following'];
 
 const getPostImages = (post) => {
-  if (!Array.isArray(post.image_urls)) return [];
+  const rawImages = post.image_urls || post.images || [];
+  let images = rawImages;
 
-  return post.image_urls
+  if (typeof rawImages === 'string') {
+    const trimmed = rawImages.trim();
+
+    if (trimmed.startsWith('[')) {
+      try {
+        images = JSON.parse(trimmed);
+      } catch (error) {
+        images = [trimmed];
+      }
+    } else if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      images = trimmed
+        .slice(1, -1)
+        .split(',')
+        .map((url) => url.replace(/^"|"$/g, '').trim());
+    } else {
+      images = [trimmed];
+    }
+  }
+
+  if (!Array.isArray(images)) return [];
+
+  return images
     .map((image) => (typeof image === 'string' ? image : image?.url))
-    .filter(Boolean);
+    .filter((url) => typeof url === 'string' && /^https?:\/\//i.test(url));
 };
 
 // Memoized Avatar component for better performance in lists
@@ -74,6 +96,8 @@ const PostCard = React.memo(({ post, activeTab, currentUserId, onLike, onSave, o
             <Image
               key={`${uri}-${index}`}
               source={{ uri }}
+              resizeMode="cover"
+              onError={(error) => console.warn('Failed to load post image:', uri, error.nativeEvent)}
               style={[
                 styles.postImage,
                 postImages.length === 1 ? styles.postImageSingle : styles.postImageGrid,

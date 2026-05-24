@@ -6,6 +6,36 @@ import PostCard from '../../components/social/PostCard';
 import { socialService } from '../../services/socialService';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../styles/theme';
 
+const getPostImages = (post) => {
+  const rawImages = post?.image_urls || post?.images || [];
+  let images = rawImages;
+
+  if (typeof rawImages === 'string') {
+    const trimmed = rawImages.trim();
+
+    if (trimmed.startsWith('[')) {
+      try {
+        images = JSON.parse(trimmed);
+      } catch (error) {
+        images = [trimmed];
+      }
+    } else if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      images = trimmed
+        .slice(1, -1)
+        .split(',')
+        .map((url) => url.replace(/^"|"$/g, '').trim());
+    } else {
+      images = [trimmed];
+    }
+  }
+
+  if (!Array.isArray(images)) return [];
+
+  return images
+    .map((image) => (typeof image === 'string' ? image : image?.url))
+    .filter((url) => typeof url === 'string' && /^https?:\/\//i.test(url));
+};
+
 export default function PostDetails({ route, navigation }) {
   const { postId, post: initialPost } = route.params || {};
   const [post, setPost] = useState(initialPost || null);
@@ -30,6 +60,8 @@ export default function PostDetails({ route, navigation }) {
     return () => { active = false; };
   }, [postId, initialPost]);
 
+  const postImages = getPostImages(post);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
@@ -46,12 +78,18 @@ export default function PostDetails({ route, navigation }) {
       ) : post ? (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <PostCard post={post} />
-          {post.image_urls?.length ? (
+          {postImages.length ? (
             <View style={styles.mediaSection}>
               <Text style={styles.sectionTitle}>Media</Text>
               <View style={styles.mediaGrid}>
-                {post.image_urls.map((uri, index) => (
-                  <Image key={index} source={{ uri }} style={styles.mediaImage} />
+                {postImages.map((uri, index) => (
+                  <Image
+                    key={index}
+                    source={{ uri }}
+                    resizeMode="cover"
+                    onError={(error) => console.warn('Failed to load post detail image:', uri, error.nativeEvent)}
+                    style={styles.mediaImage}
+                  />
                 ))}
               </View>
             </View>

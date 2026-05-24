@@ -4,9 +4,40 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../styles/theme';
 import { socialService } from '../../services/socialService';
 
+const getPostImages = (post) => {
+  const rawImages = post?.image_urls || post?.images || [];
+  let images = rawImages;
+
+  if (typeof rawImages === 'string') {
+    const trimmed = rawImages.trim();
+
+    if (trimmed.startsWith('[')) {
+      try {
+        images = JSON.parse(trimmed);
+      } catch (error) {
+        images = [trimmed];
+      }
+    } else if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      images = trimmed
+        .slice(1, -1)
+        .split(',')
+        .map((url) => url.replace(/^"|"$/g, '').trim());
+    } else {
+      images = [trimmed];
+    }
+  }
+
+  if (!Array.isArray(images)) return [];
+
+  return images
+    .map((image) => (typeof image === 'string' ? image : image?.url))
+    .filter((url) => typeof url === 'string' && /^https?:\/\//i.test(url));
+};
+
 export default function PostCard({ post, onLike, onComment, onShare, onPress }) {
   const [liked, setLiked] = useState(post.is_liked || false);
   const [likesCount, setLikesCount] = useState(post.likes_count || 0);
+  const postImages = getPostImages(post);
 
   const handleLike = async () => {
     try {
@@ -69,24 +100,25 @@ export default function PostCard({ post, onLike, onComment, onShare, onPress }) 
       <Text style={styles.content}>{post.content}</Text>
 
       {/* Images */}
-      {post.image_urls && post.image_urls.length > 0 && (
+      {postImages.length > 0 && (
         <View style={styles.imagesContainer}>
-          {post.image_urls.slice(0, 4).map((url, index) => (
+          {postImages.slice(0, 4).map((url, index) => (
             <Image
               key={index}
               source={{ uri: url }}
               style={[
                 styles.postImage,
-                post.image_urls.length === 1 && styles.singleImage,
-                post.image_urls.length === 2 && styles.doubleImage,
-                post.image_urls.length > 2 && styles.gridImage,
+                postImages.length === 1 && styles.singleImage,
+                postImages.length === 2 && styles.doubleImage,
+                postImages.length > 2 && styles.gridImage,
               ]}
               resizeMode="cover"
+              onError={(error) => console.warn('Failed to load post card image:', url, error.nativeEvent)}
             />
           ))}
-          {post.image_urls.length > 4 && (
+          {postImages.length > 4 && (
             <View style={styles.moreImagesOverlay}>
-              <Text style={styles.moreImagesText}>+{post.image_urls.length - 4}</Text>
+              <Text style={styles.moreImagesText}>+{postImages.length - 4}</Text>
             </View>
           )}
         </View>
