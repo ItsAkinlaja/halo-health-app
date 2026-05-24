@@ -13,7 +13,7 @@ class ApiClient {
   constructor() {
     this.baseURL = API_URL;
     this.cache = new Map();
-    this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
+    this.cacheTimeout = 60 * 1000; // 1 minute (was 5 — too long for social feed)
   }
 
   async getAuthToken() {

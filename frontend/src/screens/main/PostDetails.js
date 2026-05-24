@@ -290,7 +290,7 @@ export default function PostDetails({ route, navigation }) {
                   {postImages.map((uri, i) => (
                     <Image
                       key={i}
-                      source={{ uri: encodeURI(uri) }}
+                      source={{ uri }}
                       style={[
                         styles.postImage,
                         postImages.length === 1 ? styles.imageSingle : styles.imageGrid,

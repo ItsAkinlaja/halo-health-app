@@ -53,6 +53,7 @@ export default function HomeDashboard({ navigation }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showDisclaimerBanner, setShowDisclaimerBanner] = useState(false);
   const [onboardingData, setOnboardingData] = useState(null);
+  const [scanContextDismissed, setScanContextDismissed] = useState(false);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const isMounted = useRef(true);
@@ -169,9 +170,16 @@ export default function HomeDashboard({ navigation }) {
     try {
       const disclaimerAccepted = await storage.getItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED);
       if (isMounted.current) setShowDisclaimerBanner(!disclaimerAccepted);
+      const dismissed = await storage.getItem(STORAGE_KEYS.SCAN_CONTEXT_DISMISSED);
+      if (isMounted.current) setScanContextDismissed(!!dismissed);
     } catch (error) {
       console.warn('Failed to check disclaimer status:', error);
     }
+  };
+
+  const handleDismissScanContext = async () => {
+    setScanContextDismissed(true);
+    await storage.setItem(STORAGE_KEYS.SCAN_CONTEXT_DISMISSED, true);
   };
 
   const getGreeting = useCallback(() => {
@@ -307,7 +315,7 @@ export default function HomeDashboard({ navigation }) {
           </TouchableOpacity>
         ) : null}
 
-        {activeProfile ? (
+        {activeProfile && !scanContextDismissed ? (
           <Card style={styles.scanContextCard} variant="ghost">
             <View style={styles.scanContextHeader}>
               <View style={styles.scanContextIconWrap}>
@@ -321,6 +329,13 @@ export default function HomeDashboard({ navigation }) {
                     : activeProfile.name}
                 </Text>
               </View>
+              <TouchableOpacity
+                onPress={handleDismissScanContext}
+                style={styles.scanContextDismiss}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={18} color={COLORS.textTertiary} />
+              </TouchableOpacity>
             </View>
             <Text style={styles.scanContextSub}>
               Products and recommendations will use this member's profile until you switch.
@@ -359,29 +374,42 @@ export default function HomeDashboard({ navigation }) {
           </View>
           <View style={styles.heroDivider} />
           <View style={styles.heroStats}>
-            {scanStats?.categoryScores ? (
-              Object.entries(scanStats.categoryScores).slice(0, 3).map(([category, score]) => (
-                <View key={category} style={styles.heroStat}>
-                  <Text style={[styles.heroStatScore, { color: getScoreColor(score) }]}>
-                    {score}
-                  </Text>
-                  <Text style={styles.heroStatLabel}>{category}</Text>
-                </View>
-              ))
-            ) : (
-              [
-                { label: 'Food', score: healthScore },
-                { label: 'Beverages', score: healthScore },
-                { label: 'Personal Care', score: healthScore },
-              ].map((item) => (
-                <View key={item.label} style={styles.heroStat}>
-                  <Text style={[styles.heroStatScore, { color: getScoreColor(item.score) }]}>
-                    {item.score}
-                  </Text>
-                  <Text style={styles.heroStatLabel}>{item.label}</Text>
-                </View>
-              ))
-            )}
+            {(() => {
+              const CATEGORY_ICONS = {
+                Food:        { icon: 'restaurant-outline',   color: COLORS.success  },
+                Water:       { icon: 'water-outline',        color: COLORS.info     },
+                Personal:    { icon: 'sparkles-outline',     color: COLORS.accent   },
+                Household:   { icon: 'home-outline',         color: COLORS.warning  },
+                Pet:         { icon: 'paw-outline',          color: COLORS.primary  },
+                Supplements: { icon: 'fitness-outline',      color: COLORS.error    },
+              };
+
+              const ALL_CATEGORIES = ['Food', 'Water', 'Personal', 'Household', 'Pet'];
+
+              // Use real data if available, otherwise show dashes
+              const scores = scanStats?.categoryScores || {};
+              const hasData = Object.keys(scores).length > 0;
+
+              const display = hasData
+                ? Object.entries(scores).slice(0, 5)
+                : ALL_CATEGORIES.map(c => [c, null]);
+
+              return display.map(([label, score]) => {
+                const meta = CATEGORY_ICONS[label] || { icon: 'grid-outline', color: COLORS.primary };
+                const scoreColor = score !== null ? getScoreColor(score) : COLORS.textTertiary;
+                return (
+                  <View key={label} style={styles.heroStat}>
+                    <View style={[styles.heroStatIcon, { backgroundColor: meta.color + '18' }]}>
+                      <Ionicons name={meta.icon} size={16} color={meta.color} />
+                    </View>
+                    <Text style={[styles.heroStatScore, { color: scoreColor }]}>
+                      {score !== null ? score : '—'}
+                    </Text>
+                    <Text style={styles.heroStatLabel}>{label}</Text>
+                  </View>
+                );
+              });
+            })()}
           </View>
         </Card>
 
@@ -717,6 +745,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   scanContextTextWrap: { flex: 1 },
+  scanContextDismiss: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    backgroundColor: COLORS.border,
+  },
   scanContextLabel: {
     fontSize: TYPOGRAPHY.xs,
     color: COLORS.textTertiary,
@@ -781,8 +817,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
   },
   heroStat: { alignItems: 'center', gap: 4 },
+  heroStatIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
   heroStatScore: {
-    fontSize: TYPOGRAPHY.xl,
+    fontSize: TYPOGRAPHY.lg,
     fontWeight: '700',
   },
   heroStatLabel: {

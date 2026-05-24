@@ -224,9 +224,10 @@ class ScanController {
       const days = period === '7d' ? 7 : period === '90d' ? 90 : 30;
       const since = new Date(Date.now() - days * 86400000).toISOString();
 
+      // Fetch scans joined with product category
       let queryBuilder = supabase
         .from('product_scans')
-        .select('score_given, created_at, profile_id')
+        .select('score_given, created_at, profile_id, products(category)')
         .eq('user_id', userId)
         .gte('created_at', since);
 
@@ -241,7 +242,7 @@ class ScanController {
         ? Math.round(scans.reduce((s, r) => s + (r.score_given || 0), 0) / total)
         : 0;
 
-      // Simple week-over-week trend
+      // Week-over-week trend
       const midpoint = new Date(Date.now() - (days / 2) * 86400000).toISOString();
       const recent = scans.filter((s) => s.created_at >= midpoint);
       const older = scans.filter((s) => s.created_at < midpoint);
@@ -249,9 +250,34 @@ class ScanController {
       const olderAvg = older.length > 0 ? older.reduce((s, r) => s + (r.score_given || 0), 0) / older.length : 0;
       const trend = Math.round(recentAvg - olderAvg);
 
+      // Category score mapping
+      const CATEGORY_MAP = {
+        food:          'Food',
+        beverage:      'Water',
+        personal_care: 'Personal',
+        household:     'Household',
+        pet:           'Pet',
+        supplement:    'Supplements',
+      };
+
+      // Group scores by category
+      const categoryBuckets = {};
+      for (const scan of scans || []) {
+        const raw = scan.products?.category || 'food';
+        const label = CATEGORY_MAP[raw] || 'Food';
+        if (!categoryBuckets[label]) categoryBuckets[label] = [];
+        categoryBuckets[label].push(scan.score_given || 0);
+      }
+
+      // Average per category
+      const categoryScores = {};
+      for (const [label, scores] of Object.entries(categoryBuckets)) {
+        categoryScores[label] = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+      }
+
       res.json({
         status: 'success',
-        data: { total_scans: total, average_score: avgScore, trend },
+        data: { total_scans: total, average_score: avgScore, trend, categoryScores },
       });
     } catch (error) {
       next(error);

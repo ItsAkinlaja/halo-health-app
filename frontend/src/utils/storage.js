@@ -18,6 +18,7 @@ export const STORAGE_KEYS = {
   LANGUAGE: 'language',
   ONBOARDING_DATA: 'onboardingData',
   SCHEDULED_NOTIFICATION_IDS: 'scheduledNotificationIds',
+  SCAN_CONTEXT_DISMISSED: 'scanContextDismissed',
 };
 
 // Get item from storage

@@ -61,10 +61,11 @@ class SocialService {
   // ==================== COMMENTS ====================
   
   async createComment(postId, content, parentCommentId = null) {
-    const response = await api.post(`/api/social/posts/${postId}/comments`, {
-      content,
-      parent_comment_id: parentCommentId,
-    });
+    const body = { content };
+    if (parentCommentId) body.parent_comment_id = parentCommentId;
+    const response = await api.post(`/api/social/posts/${postId}/comments`, body);
+    // Invalidate comments cache
+    api.invalidateCache(`/api/social/posts/${postId}/comments`);
     return response.data;
   }
 

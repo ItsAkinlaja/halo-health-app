@@ -15,6 +15,19 @@ import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../styles/theme
 
 const TABS = ['Discover', 'Following'];
 
+const timeAgo = (ts) => {
+  if (!ts) return 'now';
+  const diff = Date.now() - new Date(ts).getTime();
+  const m = Math.floor(diff / 60000);
+  const h = Math.floor(diff / 3600000);
+  const d = Math.floor(diff / 86400000);
+  if (m < 1) return 'Just now';
+  if (m < 60) return `${m}m ago`;
+  if (h < 24) return `${h}h ago`;
+  if (d < 7) return `${d}d ago`;
+  return new Date(ts).toLocaleDateString();
+};
+
 const getPostImages = (post) => {
   const rawImages = post.image_urls || post.images || [];
   let images = rawImages;
@@ -93,7 +106,7 @@ const PostCard = React.memo(({ post, activeTab, currentUserId, onLike, onSave, o
         <Avatar initials={initials} color={author.avatarColor} avatarUrl={author.avatarUrl} size={40} />
         <View style={styles.postAuthorInfo}>
           <Text style={styles.postAuthor}>{author.name}</Text>
-          <Text style={styles.postHandle}>@{author.handle} · {post.time_ago || 'now'}</Text>
+          <Text style={styles.postHandle}>@{author.handle} · {timeAgo(post.created_at)}</Text>
         </View>
         {canFollowAuthor ? (
           <FollowButton
@@ -114,8 +127,8 @@ const PostCard = React.memo(({ post, activeTab, currentUserId, onLike, onSave, o
         <View style={styles.postImages}>
           {postImages.map((uri, index) => (
             <Image
-              key={`${uri}-${index}`}
-              source={{ uri: encodeURI(uri) }}
+              key={`${index}`}
+              source={{ uri }}
               resizeMode="cover"
               onError={() => console.warn('Failed to load post image:', uri)}
               style={[
