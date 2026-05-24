@@ -168,7 +168,7 @@ const MainNavigator = () => {
       <Stack.Screen name="BabyKids" component={PlaceholderScreen} />
       <Stack.Screen name="PetFood" component={PlaceholderScreen} />
       <Stack.Screen name="RecapsWrapped" component={PlaceholderScreen} />
-      <Stack.Screen name="Referrals" component={PlaceholderScreen} />
+      <Stack.Screen name="Referrals" component={Wallet} />
       <Stack.Screen name="Debug" component={DebugScreen} />
       
       {/* Settings Screens */}

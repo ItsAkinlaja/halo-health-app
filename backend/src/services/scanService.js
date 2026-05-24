@@ -4,6 +4,7 @@ const aiService = require('./aiService');
 const ocrService = require('./ocrService');
 const healthScoreService = require('./healthScoreService');
 const productHealthScoreService = require('./productHealthScoreService');
+const referralService = require('./referralService');
 const { ValidationError, NotFoundError } = require('../middleware/errorHandler');
 const { logger, logAICall } = require('../utils/logger');
 
@@ -44,6 +45,13 @@ class ScanService {
       
       // Update user's health score
       await healthScoreService.updateHealthScore(userId, profileId);
+
+      // Referral reward rule: first successful scan completes pending referral with $1 reward.
+      try {
+        await referralService.completePendingReferralForReferredUser(userId, 1.00);
+      } catch (referralError) {
+        logger.warn('Referral completion after barcode scan failed:', referralError.message);
+      }
       
       logger.info(`Barcode scan completed: ${barcode}`);
       
@@ -114,6 +122,13 @@ class ScanService {
       
       // Update health score
       await healthScoreService.updateHealthScore(userId, profileId);
+
+      // Referral reward rule: first successful scan completes pending referral with $1 reward.
+      try {
+        await referralService.completePendingReferralForReferredUser(userId, 1.00);
+      } catch (referralError) {
+        logger.warn('Referral completion after photo scan failed:', referralError.message);
+      }
       
       logger.info(`Photo scan completed for user: ${userId}`);
       

@@ -11,7 +11,9 @@ class ReferralService {
         .from('referral_codes')
         .select('code')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
+
+      if (checkError) throw checkError;
 
       if (existing) return existing.code;
 
@@ -54,7 +56,9 @@ class ReferralService {
         .from('referrals')
         .select('id')
         .eq('referred_user_id', newUserId)
-        .single();
+        .maybeSingle();
+
+      if (checkError) throw checkError;
 
       if (existing) {
         throw new Error('Referral code already applied');
@@ -96,6 +100,10 @@ class ReferralService {
 
       if (fetchError) throw fetchError;
 
+      if (referral.status === 'completed') {
+        return { success: true, rewardAmount: parseFloat(referral.reward_amount || 0), alreadyCompleted: true };
+      }
+
       const { error: updateError } = await supabase
         .from('referrals')
         .update({
@@ -112,6 +120,28 @@ class ReferralService {
       return { success: true, rewardAmount };
     } catch (error) {
       logger.error('Error completing referral:', error);
+      throw error;
+    }
+  }
+
+  async completePendingReferralForReferredUser(referredUserId, rewardAmount = 1.00) {
+    try {
+      const { data: referral, error } = await supabase
+        .from('referrals')
+        .select('id, status')
+        .eq('referred_user_id', referredUserId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!referral) return { completed: false, reason: 'no_pending_referral' };
+
+      const result = await this.completeReferral(referral.id, rewardAmount);
+      return { completed: !result?.alreadyCompleted, referralId: referral.id, result };
+    } catch (error) {
+      logger.error('Error completing pending referral for referred user:', error);
       throw error;
     }
   }
@@ -158,12 +188,13 @@ class ReferralService {
 
       if (statsError) throw statsError;
 
-      const total = stats.reduce((sum, e) => sum + parseFloat(e.amount), 0);
-      const pending = stats.filter(e => e.status === 'pending').reduce((sum, e) => sum + parseFloat(e.amount), 0);
-      const paid = stats.filter(e => e.status === 'paid').reduce((sum, e) => sum + parseFloat(e.amount), 0);
+      const safeStats = stats || [];
+      const total = safeStats.reduce((sum, e) => sum + parseFloat(e.amount), 0);
+      const pending = safeStats.filter(e => e.status === 'pending').reduce((sum, e) => sum + parseFloat(e.amount), 0);
+      const paid = safeStats.filter(e => e.status === 'paid').reduce((sum, e) => sum + parseFloat(e.amount), 0);
 
       return {
-        earnings,
+        earnings: earnings || [],
         stats: { total, pending, paid }
       };
     } catch (error) {
@@ -211,9 +242,14 @@ class ReferralService {
 
   async requestPayout(userId, amount, method = 'paypal', details = {}) {
     try {
-      const { data: earnings } = await this.getUserEarnings(userId);
-      
-      if (earnings.stats.pending < amount) {
+      const earningsData = await this.getUserEarnings(userId);
+      const normalizedAmount = parseFloat(amount);
+
+      if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+        throw new Error('Invalid payout amount');
+      }
+
+      if ((earningsData?.stats?.pending || 0) < normalizedAmount) {
         throw new Error('Insufficient balance');
       }
 
@@ -221,7 +257,7 @@ class ReferralService {
         .from('payouts')
         .insert([{
           user_id: userId,
-          amount,
+          amount: normalizedAmount,
           method,
           details,
           status: 'pending',
@@ -231,11 +267,59 @@ class ReferralService {
         .single();
 
       if (error) throw error;
+
+      logger.info(`[ReferralService] New payout request submitted`, {
+        userId,
+        payoutId: payout.id,
+        amount: normalizedAmount,
+        method,
+      });
+
       return payout;
     } catch (error) {
       logger.error('Error requesting payout:', error);
       throw error;
     }
+  }
+
+  async getPendingPayoutRequests(limit = 100, offset = 0) {
+    const { data, error } = await supabase
+      .from('payouts')
+      .select('*')
+      .eq('status', 'pending')
+      .order('requested_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  async updatePayoutStatus(payoutId, status) {
+    const allowed = ['paid', 'rejected'];
+    if (!allowed.includes(status)) {
+      throw new Error('Invalid payout status');
+    }
+
+    const patch = {
+      status,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (status === 'paid') {
+      patch.paid_at = new Date().toISOString();
+    }
+
+    const { data, error } = await supabase
+      .from('payouts')
+      .update(patch)
+      .eq('id', payoutId)
+      .select()
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) throw new Error('Payout request not found');
+
+    return data;
   }
 }
 
