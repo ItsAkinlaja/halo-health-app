@@ -36,6 +36,10 @@ const { logger, performanceMonitor } = require('./utils/logger');
 
 const app = express();
 
+// Trust Railway's reverse proxy so express-rate-limit can read the real client IP
+// from the X-Forwarded-For header. '1' means trust one hop (the Railway load balancer).
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 app.use(cors({
