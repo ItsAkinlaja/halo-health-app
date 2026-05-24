@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIn
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { useCameraPermissions } from 'expo-camera';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../styles/theme';
 
@@ -28,6 +29,7 @@ export default function OnboardingStep8({ navigation, nextStep }) {
   const [notifGranted, setNotifGranted] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const isExpoGo = Constants.appOwnership === 'expo';
 
   const cameraGranted = cameraPermission?.granted ?? false;
 
@@ -41,6 +43,15 @@ export default function OnboardingStep8({ navigation, nextStep }) {
   };
 
   const handleRequestNotifications = async () => {
+    if (isExpoGo) {
+      setNotifGranted(false);
+      Alert.alert(
+        'Development Build Needed',
+        'Push notification permission requires a development build on SDK 53+ and is not fully supported in Expo Go.'
+      );
+      return;
+    }
+
     setRequesting(true);
     try {
       // expo-notifications not fully supported in Expo Go from SDK 53+
@@ -82,10 +93,14 @@ export default function OnboardingStep8({ navigation, nextStep }) {
     setRequesting(true);
     try {
       await requestCameraPermission();
-      try {
-        const { status } = await Notifications.requestPermissionsAsync();
-        setNotifGranted(status === 'granted');
-      } catch {
+      if (!isExpoGo) {
+        try {
+          const { status } = await Notifications.requestPermissionsAsync();
+          setNotifGranted(status === 'granted');
+        } catch {
+          setNotifGranted(false);
+        }
+      } else {
         setNotifGranted(false);
       }
     } catch (error) {

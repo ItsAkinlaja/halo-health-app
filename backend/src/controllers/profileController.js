@@ -110,8 +110,12 @@ class ProfileController {
     try {
       const { userId } = req.params;
       if (userId !== req.user.id) throw new ForbiddenError();
-
       if (!req.file) {
+        console.warn('[ProfileController] uploadUserPhoto called but no file found on request', {
+          userId,
+          hasFile: !!req.file,
+          bodyKeys: Object.keys(req.body || {}),
+        });
         throw new ValidationError('Photo is required');
       }
       // Resize/normalize and upload to Supabase Storage
@@ -149,6 +153,28 @@ class ProfileController {
       }
 
       res.json({ status: 'success', data: { avatar_url: publicUrl } });
+    } catch (error) {
+      console.error('[ProfileController] uploadUserPhoto failed:', error?.message || error);
+      next(error);
+    }
+  }
+
+  // DELETE /api/profiles/user/:userId/photo
+  async removeUserPhoto(req, res, next) {
+    try {
+      const { userId } = req.params;
+      if (userId !== req.user.id) throw new ForbiddenError();
+
+      const { error } = await supabase
+        .from('users')
+        .update({ avatar_url: null, updated_at: new Date().toISOString() })
+        .eq('id', userId);
+
+      if (error) {
+        throw new ValidationError(error.message);
+      }
+
+      res.json({ status: 'success', data: { avatar_url: null } });
     } catch (error) {
       next(error);
     }

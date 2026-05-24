@@ -1,17 +1,41 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  ScrollView,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../../styles/theme';
 import { socialService } from '../../services/socialService';
 import { api } from '../../services/api';
 
-export default function PostComposer({ onPostCreated, onCancel }) {
+export default function PostComposer({ onPostCreated, onCancel, initialImages, onAttachImages }) {
+  const insets = useSafeAreaInsets();
   const [content, setContent] = useState('');
   const [overlayText, setOverlayText] = useState('');
-  const [images, setImages] = useState([]); // [{ uri, caption }]
+  const [images, setImages] = useState(() => (Array.isArray(initialImages) ? initialImages : [])); // [{ uri, caption }]
   const [isPublic, setIsPublic] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!Array.isArray(initialImages)) return;
+
+    // Prevent update loops when parent passes a new array identity on each render.
+    setImages((prev) => {
+      if (prev.length !== initialImages.length) return initialImages;
+      const sameUris = prev.every((img, index) => img?.uri === initialImages[index]?.uri);
+      return sameUris ? prev : initialImages;
+    });
+  }, [initialImages]);
 
   const handlePost = async () => {
     if (!content.trim() && !overlayText.trim() && images.length === 0) {
@@ -36,9 +60,13 @@ export default function PostComposer({ onPostCreated, onCancel }) {
 
           const uploadRes = await api.post('/api/social/uploads/images', form);
           const returned = uploadRes?.data?.urls || uploadRes?.urls || [];
-          imageUrls = images.map((img, idx) => ({ url: returned[idx] || img.uri, caption: img.caption || '' }));
+          if (!returned.length && images.length > 0) {
+            throw new Error('Image upload failed. Please try again.');
+          }
+          imageUrls = images.map((img, idx) => ({ url: returned[idx] || img.uri }));
         } catch (uploadErr) {
-          console.warn('Image upload failed, proceeding with local URIs:', uploadErr);
+          console.warn('Image upload failed:', uploadErr);
+          throw uploadErr;
         }
       }
 
@@ -50,15 +78,22 @@ export default function PostComposer({ onPostCreated, onCancel }) {
       };
 
       const result = await socialService.createPost(postData);
-      onPostCreated?.(result.data.post);
-      
+      const createdPost = result?.post || result?.data?.post || result?.data || result;
+
       // Reset form
       setContent('');
-            setOverlayText('');
+      setOverlayText('');
       setImages([]);
+
+      Alert.alert('Posted', 'Your post was published successfully.', [
+        {
+          text: 'OK',
+          onPress: () => onPostCreated?.(createdPost),
+        },
+      ]);
     } catch (error) {
       console.error('Failed to create post:', error);
-      Alert.alert('Error', 'Failed to create post. Please try again.');
+      Alert.alert('Error', error.message || 'Failed to create post. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -78,59 +113,46 @@ export default function PostComposer({ onPostCreated, onCancel }) {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: [ImagePicker.MediaType?.Images ?? 'images'],
       allowsMultipleSelection: true,
       quality: 0.85,
     });
 
     if (result.canceled) return;
 
-    const nextImages = result.assets.map((asset) => ({ uri: asset.uri, caption: '' }));
-    setImages((prev) => [...prev, ...nextImages].slice(0, 4));
+    const nextImages = result.assets.map((asset) => ({ uri: asset.uri }));
+    const combined = [...images, ...nextImages].slice(0, 4);
+    setImages(combined);
+    // notify parent (if present)
+    onAttachImages?.(combined);
   };
 
   const removeImage = (index) => {
     setImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const setImageCaption = (index, text) => {
-    setImages(prev => prev.map((img, i) => i === index ? { ...img, caption: text } : img));
-  };
-
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
+    >
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onCancel} disabled={isLoading}>
           <Text style={styles.cancelButton}>Cancel</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Create Post</Text>
-        <TouchableOpacity 
-          onPress={handlePost} 
-          disabled={isLoading || (!content.trim() && images.length === 0 && !overlayText.trim())}
-        >
-          <Text style={[
-            styles.postButton,
-            (isLoading || (!content.trim() && images.length === 0 && !overlayText.trim())) && styles.postButtonDisabled
-          ]}>
-            {isLoading ? 'Posting...' : 'Post'}
-          </Text>
-        </TouchableOpacity>
+        <View style={{ width: 50 }} />
       </View>
 
       {/* Content Input */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <TextInput
-          style={styles.input}
-          placeholder="What's on your mind?"
-          placeholderTextColor={COLORS.textTertiary}
-          multiline
-          value={content}
-          onChangeText={setContent}
-          maxLength={1000}
-          autoFocus
-        />
-
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <TextInput
           style={styles.overlayInput}
           placeholder="Write on your image or add a short story note"
@@ -139,6 +161,17 @@ export default function PostComposer({ onPostCreated, onCancel }) {
           value={overlayText}
           onChangeText={setOverlayText}
           maxLength={240}
+          autoFocus
+        />
+
+        <TextInput
+          style={styles.input}
+          placeholder="What's on your mind?"
+          placeholderTextColor={COLORS.textTertiary}
+          multiline
+          value={content}
+          onChangeText={setContent}
+          maxLength={1000}
         />
 
         {/* Image Preview */}
@@ -153,14 +186,6 @@ export default function PostComposer({ onPostCreated, onCancel }) {
                 >
                   <Ionicons name="close-circle" size={24} color={COLORS.white} />
                 </TouchableOpacity>
-                <TextInput
-                  placeholder="Add a caption..."
-                  placeholderTextColor={COLORS.textTertiary}
-                  style={styles.imageCaptionInput}
-                  value={img.caption}
-                  onChangeText={(t) => setImageCaption(index, t)}
-                  maxLength={220}
-                />
               </View>
             ))}
           </View>
@@ -171,30 +196,35 @@ export default function PostComposer({ onPostCreated, onCancel }) {
       </ScrollView>
 
       {/* Actions */}
-      <View style={styles.actions}>
-        <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={handleAddImage}
-        >
-          <Ionicons name="image-outline" size={24} color={COLORS.primary} />
-          <Text style={styles.actionText}>Photo</Text>
-        </TouchableOpacity>
+      <View style={[styles.actions, { paddingBottom: Math.max(insets.bottom, SPACING.sm) }]}>
+        <View style={styles.leftActions}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleAddImage}>
+            <Ionicons name="image-outline" size={22} color={COLORS.primary} />
+            <Text style={styles.actionText}>Attach</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={() => setIsPublic(!isPublic)}
+          <TouchableOpacity style={styles.privacyPill} onPress={() => setIsPublic(!isPublic)}>
+            <Ionicons
+              name={isPublic ? 'globe-outline' : 'lock-closed-outline'}
+              size={16}
+              color={COLORS.primary}
+            />
+            <Text style={styles.privacyText}>{isPublic ? 'Public' : 'Private'}</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          style={[
+            styles.postActionButton,
+            (isLoading || (!content.trim() && images.length === 0 && !overlayText.trim())) && styles.postActionButtonDisabled,
+          ]}
+          onPress={handlePost}
+          disabled={isLoading || (!content.trim() && images.length === 0 && !overlayText.trim())}
         >
-          <Ionicons 
-            name={isPublic ? 'globe-outline' : 'lock-closed-outline'} 
-            size={24} 
-            color={COLORS.primary} 
-          />
-          <Text style={styles.actionText}>
-            {isPublic ? 'Public' : 'Private'}
-          </Text>
+          <Text style={styles.postActionButtonText}>{isLoading ? 'Posting...' : 'Post'}</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -221,26 +251,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.textPrimary,
   },
-  postButton: {
-    fontSize: TYPOGRAPHY.base,
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  postButtonDisabled: {
-    color: COLORS.textTertiary,
-  },
   content: {
     flex: 1,
     padding: SPACING.base,
   },
+  contentContainer: {
+    paddingBottom: SPACING.base,
+  },
   input: {
     fontSize: TYPOGRAPHY.base,
     color: COLORS.textPrimary,
-    minHeight: 150,
+    minHeight: 120,
+    marginTop: SPACING.md,
     textAlignVertical: 'top',
   },
   overlayInput: {
-    marginTop: SPACING.md,
     padding: SPACING.md,
     minHeight: 90,
     borderRadius: RADIUS.md,
@@ -268,18 +293,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: COLORS.border,
-  },
-  imageCaptionInput: {
-    position: 'absolute',
-    left: 8,
-    right: 8,
-    bottom: 8,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    borderRadius: RADIUS.sm,
-    fontSize: TYPOGRAPHY.xs,
-    color: COLORS.textPrimary,
   },
   imageOverlay: {
     position: 'absolute',
@@ -313,20 +326,60 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: SPACING.base,
-    paddingVertical: SPACING.base,
+    paddingTop: SPACING.sm,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+  },
+  leftActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: SPACING.xl,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
   },
   actionText: {
     fontSize: TYPOGRAPHY.sm,
     color: COLORS.primary,
     marginLeft: SPACING.xs,
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  privacyPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.primary + '44',
+    backgroundColor: COLORS.primary + '10',
+    borderRadius: 999,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    gap: 6,
+  },
+  privacyText: {
+    fontSize: TYPOGRAPHY.xs,
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+  postActionButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 999,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    minWidth: 96,
+    alignItems: 'center',
+  },
+  postActionButtonDisabled: {
+    opacity: 0.5,
+  },
+  postActionButtonText: {
+    color: COLORS.white,
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: '700',
   },
 });

@@ -71,7 +71,20 @@ export const profileService = {
     const match = /\.(\w+)$/.exec(filename);
     const type = match ? `image/${match[1]}` : 'image/jpeg';
     formData.append('photo', { uri: imageUri, type, name: filename || 'profile.jpg' });
-    const res = await api.post(`/api/profiles/user/${userId}/photo`, formData);
+
+    try {
+      console.debug('[profileService] uploading photo', { userId, filename, type });
+      const res = await api.post(`/api/profiles/user/${userId}/photo`, formData);
+      console.debug('[profileService] upload response', res?.data || res);
+      return res.data ?? res;
+    } catch (err) {
+      console.warn('[profileService] upload failed', err?.message || err);
+      throw err;
+    }
+  },
+
+  async removePhoto(userId) {
+    const res = await api.delete(`/api/profiles/user/${userId}/photo`);
     return res.data ?? res;
   },
 

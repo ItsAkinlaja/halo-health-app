@@ -73,14 +73,14 @@ export default function Profile({ navigation }) {
         <Card style={styles.headerCard} variant="elevated">
           <View style={styles.profileHeader}>
             <View style={styles.avatarContainer}>
-              <TouchableOpacity style={styles.avatar} onPress={() => navigation.navigate('EditProfile')}>
+              <TouchableOpacity style={styles.avatar} onPress={() => navigation.navigate('EditProfilePhoto')}>
                 {avatarUrl ? (
                   <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
                 ) : (
                   <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
                 )}
               </TouchableOpacity>
-              <TouchableOpacity style={styles.editAvatarBtn} onPress={() => navigation.navigate('EditProfile')}>
+              <TouchableOpacity style={styles.editAvatarBtn} onPress={() => navigation.navigate('EditProfilePhoto')}>
                 <Ionicons name="camera-outline" size={16} color={COLORS.white} />
               </TouchableOpacity>
             </View>

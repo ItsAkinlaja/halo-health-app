@@ -41,6 +41,11 @@ router.post('/user/:userId/photo', upload.single('photo'), [
   validate,
 ], catchAsync(profileController.uploadUserPhoto));
 
+router.delete('/user/:userId/photo', [
+  param('userId').isUUID().withMessage('Invalid user ID format'),
+  validate,
+], catchAsync(profileController.removeUserPhoto));
+
 router.post('/user/:userId/accept-terms', [
   param('userId').isUUID().withMessage('Invalid user ID format'),
   body('version').optional().isString(),

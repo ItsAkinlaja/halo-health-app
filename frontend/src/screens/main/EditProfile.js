@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAppContext } from '../../context/AppContext';
+import storage, { STORAGE_KEYS } from '../../utils/storage';
 import { profileService } from '../../services/profileService';
 import { supabase } from '../../services/supabase';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../styles/theme';
@@ -21,11 +22,31 @@ export default function EditProfile({ navigation }) {
 
   useEffect(() => {
     if (user) {
-      setName(user.user_metadata?.name ?? user.user_metadata?.full_name ?? '');
+      // Prefer explicit name fields, then onboarding data saved in user metadata, then persisted onboarding storage
+      const meta = user.user_metadata || {};
+      const onboardingMeta = meta.onboarding_data || {};
+      const fallbackName = onboardingMeta.fullName || onboardingMeta.full_name || onboardingMeta.name || '';
+      const initialName = meta.name || meta.full_name || fallbackName || '';
+      setName(initialName);
       setUsername(user.user_metadata?.username ?? user.user_metadata?.halo_health_id ?? '');
       setAvatarUrl(user.user_metadata?.avatar_url ?? '');
     }
   }, [user]);
+
+  // If user metadata lacked name, try to load from local onboarding storage
+  useEffect(() => {
+    const fillFromStorage = async () => {
+      if (name && name.length > 0) return;
+      try {
+        const onboardingData = await storage.getItem(STORAGE_KEYS.ONBOARDING_DATA) || {};
+        const candidate = onboardingData.fullName || onboardingData.full_name || onboardingData.name;
+        if (candidate) setName(candidate);
+      } catch (e) {
+        // ignore
+      }
+    };
+    fillFromStorage();
+  }, []);
 
   const handlePickPhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -35,7 +56,7 @@ export default function EditProfile({ navigation }) {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: [ImagePicker.MediaType?.Images ?? 'images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.9,

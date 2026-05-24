@@ -16,6 +16,15 @@ import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, getScoreColor } from '../
 
 const { width: W } = Dimensions.get('window');
 
+const GOAL_LABELS = {
+  weight_loss: 'Weight Loss',
+  muscle_gain: 'Build Muscle',
+  healthy_eating: 'Healthy Eating',
+  manage_allergies: 'Manage Allergies',
+  disease_prevention: 'Disease Prevention',
+  general_wellness: 'General Wellness',
+};
+
 const formatTime = (timestamp) => {
   if (!timestamp) return 'Recently';
   
@@ -43,6 +52,7 @@ export default function HomeDashboard({ navigation }) {
   const [scanStats, setScanStats] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showDisclaimerBanner, setShowDisclaimerBanner] = useState(false);
+  const [onboardingData, setOnboardingData] = useState(null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const isMounted = useRef(true);
@@ -57,6 +67,10 @@ export default function HomeDashboard({ navigation }) {
   useEffect(() => {
     loadProfiles();
   }, [user]);
+
+  useEffect(() => {
+    loadOnboardingPreferences();
+  }, [user?.id]);
 
   useEffect(() => {
     loadDashboardData();
@@ -95,6 +109,16 @@ export default function HomeDashboard({ navigation }) {
       }
     } catch (error) {
       console.warn('Failed to load profiles:', error.message);
+    }
+  };
+
+  const loadOnboardingPreferences = async () => {
+    try {
+      const saved = await storage.getItem(STORAGE_KEYS.ONBOARDING_DATA);
+      if (!isMounted.current) return;
+      setOnboardingData(saved || null);
+    } catch (error) {
+      console.warn('Failed to load onboarding preferences:', error.message);
     }
   };
 
@@ -156,6 +180,27 @@ export default function HomeDashboard({ navigation }) {
     if (h < 17) return 'Good afternoon';
     return 'Good evening';
   }, []);
+
+  const getPersonalizationSummary = useCallback(() => {
+    const goalFromProfile = activeProfile?.health_goals?.[0];
+    const goalFromOnboarding = onboardingData?.goals?.[0];
+    const selectedGoal = goalFromProfile || goalFromOnboarding;
+
+    const profileDiet = activeProfile?.dietary_restrictions?.[0];
+    const onboardingDiet = onboardingData?.dietaryPreferences?.[0]?.replace(/_/g, ' ');
+    const selectedDiet = profileDiet || onboardingDiet;
+
+    const profileAllergyCount = Array.isArray(activeProfile?.allergies) ? activeProfile.allergies.length : 0;
+    const onboardingAllergyCount = Array.isArray(onboardingData?.allergies) ? onboardingData.allergies.length : 0;
+    const allergyCount = Math.max(profileAllergyCount, onboardingAllergyCount);
+
+    const parts = [];
+    if (selectedGoal) parts.push(`Goal: ${GOAL_LABELS[selectedGoal] || selectedGoal}`);
+    if (selectedDiet) parts.push(`Diet: ${String(selectedDiet)}`);
+    if (allergyCount > 0) parts.push(`Allergy alerts: ${allergyCount}`);
+
+    return parts.join(' • ');
+  }, [activeProfile, onboardingData]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -284,6 +329,9 @@ export default function HomeDashboard({ navigation }) {
                   : 'Start scanning to see your overall dashboard'
                 }
               </Text>
+              {getPersonalizationSummary() ? (
+                <Text style={styles.personalizationText}>{getPersonalizationSummary()}</Text>
+              ) : null}
               {scanStats?.trend ? (
                 <View style={styles.trendRow}>
                   <Ionicons 
@@ -690,6 +738,12 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.sm,
     color: COLORS.textSecondary,
     marginTop: 4,
+  },
+  personalizationText: {
+    fontSize: TYPOGRAPHY.xs,
+    color: COLORS.primary,
+    marginTop: SPACING.xs,
+    fontWeight: '600',
   },
   trendRow: {
     flexDirection: 'row',

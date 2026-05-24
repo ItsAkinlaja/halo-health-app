@@ -1,5 +1,6 @@
 const socialService = require('../services/socialService');
 const { ValidationError, NotFoundError } = require('../middleware/errorHandler');
+const { supabase } = require('../utils/database');
 
 class SocialController {
   async getFeed(req, res, next) {
@@ -57,6 +58,10 @@ class SocialController {
         const publicUrl = publicData?.publicUrl || null;
 
         if (publicUrl) urls.push(publicUrl);
+      }
+
+      if (!urls.length) {
+        return res.status(500).json({ success: false, message: 'Failed to upload images' });
       }
 
       res.json({ success: true, data: { urls } });

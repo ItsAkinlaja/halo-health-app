@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import storage, { STORAGE_KEYS } from '../utils/storage';
 
 // Use EXPO_PUBLIC_API_URL when set; default to the live Railway backend.
 const API_URL = process.env.EXPO_PUBLIC_API_URL ||
@@ -18,11 +19,45 @@ class ApiClient {
   async getAuthToken() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      return session?.access_token;
+      if (session?.access_token) return session.access_token;
+
+      // Fallback: recover from locally persisted session to avoid unauthenticated race conditions.
+      const storedSession = await storage.getItem(STORAGE_KEYS.USER_SESSION);
+      if (storedSession?.access_token) {
+        if (storedSession?.refresh_token) {
+          try {
+            const { data } = await supabase.auth.setSession({
+              access_token: storedSession.access_token,
+              refresh_token: storedSession.refresh_token,
+            });
+            if (data?.session?.access_token) {
+              await storage.setItem(STORAGE_KEYS.USER_SESSION, data.session);
+              return data.session.access_token;
+            }
+          } catch (rehydrateError) {
+            console.warn('Failed to rehydrate Supabase session:', rehydrateError.message);
+          }
+        }
+
+        return storedSession.access_token;
+      }
+
+      return null;
     } catch (error) {
       console.warn('Failed to get auth token:', error.message);
       return null;
     }
+  }
+
+  _isFormData(body) {
+    if (!body) return false;
+    // React Native FormData may not satisfy instanceof across environments
+    try {
+      if (typeof FormData !== 'undefined' && body instanceof FormData) return true;
+    } catch (e) {
+      // ignore
+    }
+    return typeof body.append === 'function';
   }
 
   async request(endpoint, options = {}, _isRetry = false) {
@@ -56,8 +91,8 @@ class ApiClient {
       }
     }
 
-    // Remove Content-Type for FormData
-    if (options.body instanceof FormData) {
+    // Remove Content-Type for FormData (robust detection)
+    if (this._isFormData(options.body)) {
       delete config.headers['Content-Type'];
     }
 
@@ -139,26 +174,29 @@ class ApiClient {
   }
 
   async post(endpoint, body, options = {}) {
+    const isForm = this._isFormData(body);
     return this.request(endpoint, {
       ...options,
       method: 'POST',
-      body: body instanceof FormData ? body : JSON.stringify(body),
+      body: isForm ? body : JSON.stringify(body),
     });
   }
 
   async put(endpoint, body, options = {}) {
+    const isForm = this._isFormData(body);
     return this.request(endpoint, {
       ...options,
       method: 'PUT',
-      body: JSON.stringify(body),
+      body: isForm ? body : JSON.stringify(body),
     });
   }
 
   async delete(endpoint, body, options = {}) {
+    const isForm = this._isFormData(body);
     return this.request(endpoint, {
       ...options,
       method: 'DELETE',
-      ...(body && { body: JSON.stringify(body) }),
+      ...(body && { body: isForm ? body : JSON.stringify(body) }),
     });
   }
 

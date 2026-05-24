@@ -30,6 +30,7 @@ import SavedProducts from '../screens/profile/SavedProducts';
 import HealthReports from '../screens/main/HealthReports';
 import MealDetails from '../screens/main/MealDetails';
 import EditProfile from '../screens/main/EditProfile';
+import EditProfilePhoto from '../screens/main/EditProfilePhoto';
 import AICoach from '../screens/main/AICoach';
 import RestaurantMenuScanner from '../screens/main/RestaurantMenuScanner';
 import RestaurantFinder from '../screens/main/RestaurantFinder';
@@ -193,6 +194,7 @@ const MainNavigator = () => {
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicy} />
       <Stack.Screen name="Terms" component={Terms} />
       <Stack.Screen name="EditProfile" component={EditProfile} />
+      <Stack.Screen name="EditProfilePhoto" component={EditProfilePhoto} />
       <Stack.Screen name="AICoach" component={AICoach} />
       <Stack.Screen name="RestaurantMenuScanner" component={RestaurantMenuScanner} />
       <Stack.Screen name="RestaurantFinder" component={RestaurantFinder} />

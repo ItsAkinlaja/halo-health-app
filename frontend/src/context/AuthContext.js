@@ -14,6 +14,20 @@ export function AuthProvider({ children }) {
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
   const isProcessing = useRef(false);
 
+  const syncOnboardingFromMetadata = async (authUser) => {
+    const metadataOnboarding = authUser?.user_metadata?.onboarding_data;
+    if (!metadataOnboarding || typeof metadataOnboarding !== 'object') return;
+
+    const localOnboarding = await storage.getItem(STORAGE_KEYS.ONBOARDING_DATA);
+    const hasLocalOnboarding = localOnboarding && Object.keys(localOnboarding).length > 0;
+
+    if (!hasLocalOnboarding) {
+      await storage.setItem(STORAGE_KEYS.ONBOARDING_DATA, metadataOnboarding);
+    }
+
+    await storage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, true);
+  };
+
   useEffect(() => {
     let mounted = true;
     
@@ -44,6 +58,7 @@ export function AuthProvider({ children }) {
             isProcessing.current = true;
             
             await storage.setItem(STORAGE_KEYS.USER_SESSION, session);
+            await syncOnboardingFromMetadata(session.user);
             
             let onboardingCompleted = await storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
             let disclaimerAccepted = await storage.getItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED);
@@ -97,6 +112,7 @@ export function AuthProvider({ children }) {
       if (session?.user) {
         setUser(session.user);
         await storage.setItem(STORAGE_KEYS.USER_SESSION, session);
+        await syncOnboardingFromMetadata(session.user);
         
         let onboardingCompleted = await storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
         let disclaimerAccepted = await storage.getItem(STORAGE_KEYS.MEDICAL_DISCLAIMER_ACCEPTED);

@@ -1,5 +1,8 @@
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import storage, { STORAGE_KEYS } from './storage';
+
+const isExpoGo = Constants.appOwnership === 'expo';
 
 // Configure notification behavior for foreground
 Notifications.setNotificationHandler({
@@ -15,6 +18,11 @@ Notifications.setNotificationHandler({
  */
 export async function scheduleDailyNotifications(profile) {
   try {
+    if (isExpoGo) {
+      console.log('[Notifications] Skipping local notification scheduling in Expo Go. Use a development build.');
+      return false;
+    }
+
     // 1. Request/verify permissions
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
